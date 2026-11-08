@@ -71,8 +71,7 @@ reverse(ASTNode::ref list)
 ASTNode::ASTNode(NodeType nodetype, OSLCompilerImpl* compiler)
     : m_nodetype(nodetype)
     , m_compiler(compiler)
-    , m_sourcefile(compiler->filename())
-    , m_sourceline(compiler->lineno())
+    , m_srcloc(compiler->srcloc())
     , m_op(0)
     , m_is_lvalue(false)
 {
@@ -88,8 +87,7 @@ ASTNode::ASTNode(NodeType nodetype, OSLCompilerImpl* compiler, int op,
                  ASTNode* a)
     : m_nodetype(nodetype)
     , m_compiler(compiler)
-    , m_sourcefile(compiler->filename())
-    , m_sourceline(compiler->lineno())
+    , m_srcloc(compiler->srcloc())
     , m_op(op)
     , m_is_lvalue(false)
 {
@@ -105,8 +103,7 @@ ASTNode::ASTNode(NodeType nodetype, OSLCompilerImpl* compiler, int op,
 ASTNode::ASTNode(NodeType nodetype, OSLCompilerImpl* compiler, int op)
     : m_nodetype(nodetype)
     , m_compiler(compiler)
-    , m_sourcefile(compiler->filename())
-    , m_sourceline(compiler->lineno())
+    , m_srcloc(compiler->srcloc())
     , m_op(op)
     , m_is_lvalue(false)
 {
@@ -122,8 +119,7 @@ ASTNode::ASTNode(NodeType nodetype, OSLCompilerImpl* compiler, int op,
                  ASTNode* a, ASTNode* b)
     : m_nodetype(nodetype)
     , m_compiler(compiler)
-    , m_sourcefile(compiler->filename())
-    , m_sourceline(compiler->lineno())
+    , m_srcloc(compiler->srcloc())
     , m_op(op)
     , m_is_lvalue(false)
 {
@@ -141,8 +137,7 @@ ASTNode::ASTNode(NodeType nodetype, OSLCompilerImpl* compiler, int op,
                  ASTNode* a, ASTNode* b, ASTNode* c)
     : m_nodetype(nodetype)
     , m_compiler(compiler)
-    , m_sourcefile(compiler->filename())
-    , m_sourceline(compiler->lineno())
+    , m_srcloc(compiler->srcloc())
     , m_op(op)
     , m_is_lvalue(false)
 {
@@ -161,8 +156,7 @@ ASTNode::ASTNode(NodeType nodetype, OSLCompilerImpl* compiler, int op,
                  ASTNode* a, ASTNode* b, ASTNode* c, ASTNode* d)
     : m_nodetype(nodetype)
     , m_compiler(compiler)
-    , m_sourcefile(compiler->filename())
-    , m_sourceline(compiler->lineno())
+    , m_srcloc(compiler->srcloc())
     , m_op(op)
     , m_is_lvalue(false)
 {
@@ -213,7 +207,7 @@ ASTNode::~ASTNode()
 void
 ASTNode::error_impl(string_view msg) const
 {
-    m_compiler->errorfmt(sourcefile(), sourceline(), "{}", msg);
+    m_compiler->errorfmt(sourceloc(), "{}", msg);
 }
 
 
@@ -221,7 +215,7 @@ ASTNode::error_impl(string_view msg) const
 void
 ASTNode::warning_impl(string_view msg) const
 {
-    m_compiler->warningfmt(sourcefile(), sourceline(), "{}", msg);
+    m_compiler->warningfmt(sourceloc(), "{}", msg);
 }
 
 
@@ -229,7 +223,7 @@ ASTNode::warning_impl(string_view msg) const
 void
 ASTNode::info_impl(string_view msg) const
 {
-    m_compiler->infofmt(sourcefile(), sourceline(), "{}", msg);
+    m_compiler->infofmt(sourceloc(), "{}", msg);
 }
 
 
@@ -237,7 +231,7 @@ ASTNode::info_impl(string_view msg) const
 void
 ASTNode::message_impl(string_view msg) const
 {
-    m_compiler->messagefmt(sourcefile(), sourceline(), "{}", msg);
+    m_compiler->messagefmt(sourceloc(), "{}", msg);
 }
 
 
@@ -366,7 +360,7 @@ ASTfunction_declaration::ASTfunction_declaration(OSLCompilerImpl* comp,
                                                  TypeSpec type, ustring name,
                                                  ASTNode* form, ASTNode* stmts,
                                                  ASTNode* meta,
-                                                 int sourceline_start)
+                                                 const SrcLoc& srcloc_start)
     : ASTNode(function_declaration_node, comp, 0, meta, form, stmts)
     , m_name(name)
     , m_sym(NULL)
@@ -375,8 +369,12 @@ ASTfunction_declaration::ASTfunction_declaration(OSLCompilerImpl* comp,
     // Some trickery -- the compiler's idea of the "current" source line
     // is the END of the function body, so if a hint was passed about the
     // start of the declaration, substitute that.
-    if (sourceline_start >= 0)
-        m_sourceline = sourceline_start;
+    // FIXME: [lfascione] Maybe with the move from int sourceline to SrcLoc this
+    // is the right thing to do here
+    if (srcloc_start) {
+        m_srcloc.line_start   = srcloc_start.line_start;
+        m_srcloc.column_begin = srcloc_start.column_begin;
+    }
 
     if (Strutil::starts_with(name, "___"))
         errorfmt("\"{}\" : sorry, can't start with three underscores", name);
@@ -386,7 +384,9 @@ ASTfunction_declaration::ASTfunction_declaration(OSLCompilerImpl* comp,
     if (existing_syms && existing_syms->symtype() != SymTypeFunction) {
         errorfmt("\"{}\" already declared in this scope as a {}", name,
                  existing_syms->typespec());
-        // FIXME -- print the file and line of the other definition
+        // print the file and line of the other definition when available
+        if (existing_syms->node())
+            comp->message_srcloc(existing_syms->node()->sourceloc());
         existing_syms = NULL;
     }
 
@@ -429,13 +429,9 @@ ASTfunction_declaration::ASTfunction_declaration(OSLCompilerImpl* comp,
                     }
                     err += "\n    ";
                     if (other) {
-                        err += Strutil::fmt::format(
-                            "{}:{}",
-                            OIIO::Filesystem::filename(
-                                other->sourcefile().string()),
-                            other->sourceline());
+                        err += Strutil::fmt::format("{}", other->sourceloc());
                     } else
-                        err += "built-in";
+                        err += "(built-in)";
                 }
             }
         }
@@ -519,7 +515,7 @@ ASTvariable_declaration::ASTvariable_declaration(OSLCompilerImpl* comp,
                                                  ustring name, ASTNode* init,
                                                  bool isparam, bool ismeta,
                                                  bool isoutput, bool initlist,
-                                                 int sourceline_start)
+                                                 const SrcLoc& srcloc_start)
     : ASTNode(variable_declaration_node, comp, 0, init, NULL /* meta */)
     , m_name(name)
     , m_sym(NULL)
@@ -531,8 +527,10 @@ ASTvariable_declaration::ASTvariable_declaration(OSLCompilerImpl* comp,
     // Some trickery -- the compiler's idea of the "current" source line
     // is the END of the declaration, so if a hint was passed about the
     // start of the declaration, substitute that.
-    if (sourceline_start >= 0)
-        m_sourceline = sourceline_start;
+    if (srcloc_start) {
+        m_srcloc.line_start   = srcloc_start.line_start;
+        m_srcloc.column_begin = srcloc_start.column_begin;
+    }
 
     if (m_initlist && init) {
         // Typecheck the init list early.
@@ -547,10 +545,8 @@ ASTvariable_declaration::ASTvariable_declaration(OSLCompilerImpl* comp,
             = Strutil::fmt::format("\"{}\" already declared in this scope",
                                    name);
         if (f->node()) {
-            std::string filename = OIIO::Filesystem::filename(
-                f->node()->sourcefile().string());
-            e += Strutil::fmt::format("\n\t\tprevious declaration was at {}:{}",
-                                      filename, f->node()->sourceline());
+            e += Strutil::fmt::format("\n\t\tprevious declaration was at {}",
+                                      f->node()->sourceloc());
         }
         if (f->scope() == 0 && f->symtype() == SymTypeFunction && isparam) {
             // special case: only a warning for param to mask global function

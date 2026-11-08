@@ -1110,6 +1110,10 @@ LLVMGEN(llvm_gen_modulus)
 
     // The following should handle f%f, v%v, v%f, i%i
     // That's all that should be allowed by oslc.
+    // fmod(a,b) = a - N*b, N = trunc(a/b), so its derivative is a' - N*b'.
+    // We only need N if b has derivs.
+    bool need_N          = Result.has_derivs() && B.has_derivs();
+    llvm::Value* N[3]    = { nullptr, nullptr, nullptr };
     const char* safe_mod = is_float ? "osl_fmod_fff" : "osl_safe_mod_iii";
     for (int i = 0; i < num_components; i++) {
         llvm::Value* a = rop.loadLLVMValue(A, i, 0, type);
@@ -1121,13 +1125,36 @@ LLVMGEN(llvm_gen_modulus)
             r = rop.ll.op_mod(a, b);
         else
             r = rop.ll.call_function(safe_mod, a, b);
+        if (need_N) {
+            // N = (a - r) / b, or 0 if b == 0. Computed before storing r,
+            // in case Result aliases A or B.
+            llvm::Value* zero = rop.ll.constant(0.0f);
+            N[i] = rop.ll.op_select(rop.ll.op_eq(b, zero), zero,
+                                    rop.ll.op_div(rop.ll.op_sub(a, r), b));
+        }
         rop.storeLLVMValue(r, Result, i, 0);
     }
 
     if (Result.has_derivs()) {
         OSL_DASSERT(is_float);
-        if (A.has_derivs()) {
-            // Modulus of duals: (a mod b, ax, ay)
+        if (need_N) {
+            // Modulus of duals: (a mod b, ax - N*bx, ay - N*by)
+            for (int d = 1; d <= 2; ++d) {
+                for (int i = 0; i < num_components; i++) {
+                    llvm::Value* bd  = rop.loadLLVMValue(B, i, d, type);
+                    llvm::Value* nbd = rop.ll.op_mul(N[i], bd);
+                    llvm::Value* deriv;
+                    if (A.has_derivs()) {
+                        llvm::Value* ad = rop.loadLLVMValue(A, i, d, type);
+                        deriv           = rop.ll.op_sub(ad, nbd);
+                    } else {
+                        deriv = rop.ll.op_neg(nbd);
+                    }
+                    rop.storeLLVMValue(deriv, Result, i, d);
+                }
+            }
+        } else if (A.has_derivs()) {
+            // Modulus of duals with constant b: (a mod b, ax, ay)
             for (int d = 1; d <= 2; ++d) {
                 for (int i = 0; i < num_components; i++) {
                     llvm::Value* deriv = rop.loadLLVMValue(A, i, d, type);

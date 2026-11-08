@@ -39,6 +39,8 @@ atan: a = atan(u); a = 0, Dx(a) = 1, Dy(a) = 0
 
 atan2: a = atan2(u,v) at (0,0); a = 0, Dx(a) = 0, Dy(a) = 0
 
+fmod: a = fmod(u+2.5,v+0.8) at (0,0); a = 0.1, Dx(a) = 1, Dy(a) = -3
+
 degrees: a = degrees(u); a = 0, Dx(a) = 57.3, Dy(a) = 0
 
 radians: a = radians(u); a = 0, Dx(a) = 0.01745, Dy(a) = 0
@@ -145,6 +147,8 @@ asin: a = asin(u); a = 1.571, Dx(a) = 0, Dy(a) = 0
 atan: a = atan(u); a = 0.7854, Dx(a) = 0.5, Dy(a) = 0
 
 atan2: a = atan2(u,v) at (1,0); a = 1.571, Dx(a) = 0, Dy(a) = 1
+
+fmod: a = fmod(u+2.5,v+0.8) at (1,0); a = 0.3, Dx(a) = 1, Dy(a) = -4
 
 degrees: a = degrees(u); a = 57.3, Dx(a) = 57.3, Dy(a) = 0
 
@@ -253,6 +257,8 @@ atan: a = atan(u); a = 0, Dx(a) = 1, Dy(a) = 0
 
 atan2: a = atan2(u,v) at (0,1); a = 0, Dx(a) = -1, Dy(a) = 0
 
+fmod: a = fmod(u+2.5,v+0.8) at (0,1); a = 0.7, Dx(a) = 1, Dy(a) = -1
+
 degrees: a = degrees(u); a = 0, Dx(a) = 57.3, Dy(a) = 0
 
 radians: a = radians(u); a = 0, Dx(a) = 0.01745, Dy(a) = 0
@@ -359,6 +365,8 @@ asin: a = asin(u); a = 1.571, Dx(a) = 0, Dy(a) = 0
 atan: a = atan(u); a = 0.7854, Dx(a) = 0.5, Dy(a) = 0
 
 atan2: a = atan2(u,v) at (1,1); a = 0.7854, Dx(a) = -0.5, Dy(a) = 0.5
+
+fmod: a = fmod(u+2.5,v+0.8) at (1,1); a = 1.7, Dx(a) = 1, Dy(a) = -1
 
 degrees: a = degrees(u); a = 57.3, Dx(a) = 57.3, Dy(a) = 0
 

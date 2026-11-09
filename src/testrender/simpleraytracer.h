@@ -125,7 +125,7 @@ private:
     int backgroundResolution = 1024;
     int aa                   = 1;
     bool no_jitter           = false;
-    int max_bounces          = 1000000;
+    int max_bounces          = 64;
     int rr_depth             = 5;
     float show_albedo_scale  = 0.0f;
     int show_globals         = 0;

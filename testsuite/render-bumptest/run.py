@@ -6,7 +6,13 @@
 
 failthresh = 0.01
 failpercent = 0.5
+
+# A few isolated pixels (fireflies) differ across platforms/GPU. Forgive
+# that many via idiff's allowfailures, keeping hardfail strict so
+# localized regressions are still caught.
 hardfail = 0.035
+allowfailures = 4
+idiff_program = "idiff"
 
 outputs = [ "out.exr" ]
 command = testrender("-r 128 128 -aa 4 --llvm_opt 13 bumptest.xml out.exr")

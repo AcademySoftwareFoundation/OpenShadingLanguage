@@ -1,4 +1,9 @@
 <World>
+   <!-- Near-specular glass spheres trap rays via total internal reflection
+        for hundreds of bounces. Such long paths are chaotic: last-bit float
+        differences between platforms send them elsewhere, relocating
+        fireflies. Cap depth so results are reproducible across platforms. -->
+   <Option max_bounces="int 16" />
    <Camera eye="0, 100, 300" look_at="0,0,0" fov="70" />
 
    <ShaderGroup>
@@ -24,7 +29,7 @@
    <Sphere center="-60,30,120"        radius="30" />
    <ShaderGroup>float xalpha 0.05; float yalpha 0.05; shader glossy_glass layer1;</ShaderGroup>
    <Sphere center="  0,30,120"        radius="30" />
-   <ShaderGroup>float xalpha 0.001; float xalpha 0.001; shader glossy_glass layer1;</ShaderGroup>
+   <ShaderGroup>float xalpha 0.001; float yalpha 0.001; shader glossy_glass layer1;</ShaderGroup>
    <Sphere center=" 60,30,120"        radius="30" />
    
 </World>

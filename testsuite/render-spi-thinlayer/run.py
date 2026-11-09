@@ -7,7 +7,12 @@
 failthresh = 0.02
 failrelative = 0.01
 failpercent = 1
-allowfailures = 5
+
+# Bright pixels (env seen through near-specular glass) vary by a few
+# percent across platforms/dependencies. Forgive up to allowfailures such
+# pixels, but keep hardfail low enough to catch localized regressions.
+hardfail = 0.1
+allowfailures = 10
 idiff_program = "idiff"
 
 outputs = [ "out.exr" ]

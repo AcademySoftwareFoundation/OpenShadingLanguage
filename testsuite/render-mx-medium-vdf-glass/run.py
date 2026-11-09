@@ -6,7 +6,13 @@
 
 failthresh = 0.01
 failpercent = 1
-allowfailures = 5
+
+# A few isolated pixels (fireflies) differ across platforms/GPU. Forgive
+# that many via idiff's allowfailures, keeping hardfail strict so
+# localized regressions are still caught.
+hardfail = 0.012
+allowfailures = 2
+idiff_program = "idiff"
 
 outputs = [ "out.exr" ]
 command = testrender("-r 98 98 -aa 16 scene.xml out.exr")

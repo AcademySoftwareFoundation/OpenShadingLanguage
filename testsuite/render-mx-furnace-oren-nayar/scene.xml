@@ -1,4 +1,7 @@
 <World>
+   <!-- Furnace test checks energy conservation, which needs unbounded
+        path depth; override testrender's default max_bounces. -->
+   <Option max_bounces="int 1000000" />
    <Camera eye="0, 0, 10" look_at="0,0,0" fov="4.2" />
 
    <ShaderGroup>

@@ -24,7 +24,7 @@
    <Sphere center="-60,30,120"        radius="30" />
    <ShaderGroup>float xalpha 0.05; float yalpha 0.05; color absorption 0.2 0.1 0.0; shader glossy_glass layer1;</ShaderGroup>
    <Sphere center="  0,30,120"        radius="30" />
-   <ShaderGroup>float xalpha 0.001; float xalpha 0.001; color absorption 0 0.1 0.2; shader glossy_glass layer1;</ShaderGroup>
+   <ShaderGroup>float xalpha 0.001; float yalpha 0.001; color absorption 0 0.1 0.2; shader glossy_glass layer1;</ShaderGroup>
    <Sphere center=" 60,30,120"        radius="30" />
    
 </World>

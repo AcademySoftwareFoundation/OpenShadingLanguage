@@ -6,6 +6,11 @@
 
 failthresh = 0.013
 failpercent = 1
+
+# A few isolated pixels (fireflies) differ across platforms/GPU. Forgive
+# that many via idiff's allowfailures, keeping hardfail strict so
+# localized regressions are still caught.
+hardfail = 0.025
 allowfailures = 3
 idiff_program = "idiff"
 

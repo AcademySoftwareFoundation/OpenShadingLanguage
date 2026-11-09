@@ -50,7 +50,12 @@ static bool userdata_isconnected = false;
 static std::string extraoptions;
 static std::string texoptions;
 static int xres = 640, yres = 480;
-static int aa = 1, max_bounces = 1000000, rr_depth = 5;
+// Default path depth limit. Keep it finite: very long paths (e.g. rays
+// trapped in glass by total internal reflection) are chaotic, so tiny
+// float differences across platforms relocate fireflies and make test
+// output brittle. Scenes needing more (e.g. white furnace tests) can set
+// <Option max_bounces="int N"/>.
+static int aa = 1, max_bounces = 64, rr_depth = 5;
 static bool no_jitter          = false;
 static float show_albedo_scale = 0.0f;
 static int show_globals        = 0;

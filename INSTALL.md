@@ -20,7 +20,7 @@ OSL requires the following dependencies or tools.
 NEW or CHANGED minimum dependencies since the last major release are **bold**.
 
 * Build system: [CMake](https://cmake.org/) 3.23 or newer (tested
-  through 4.2)
+  through 4.4)
 
 * A suitable C++17 compiler to build OSL itself, which may be any of:
    - GCC 9.3 or newer (tested through gcc 14)
@@ -28,7 +28,7 @@ NEW or CHANGED minimum dependencies since the last major release are **bold**.
    - Microsoft Visual Studio 2017 or newer
    - **Intel LLVM-based icx compiler version 2022 or newer** (note: the classic `icc` compiler is no longer supported).
 
-* [OpenImageIO](http://openimageio.org) 3.0 or newer (tested through 3.1
+* [OpenImageIO](http://openimageio.org) 3.0 or newer (tested through 3.2
   and main)
 
     OSL uses OIIO both for its texture mapping functionality as well as
@@ -69,13 +69,13 @@ NEW or CHANGED minimum dependencies since the last major release are **bold**.
 * (optional) Python: If you are building the Python bindings or running the
   testsuite:
     * **Python >= 3.9** (tested through 3.14)
-    * NumPy (tested through 2.4)
+    * NumPy (tested through 2.5)
     * A binding framework, depending on `OSL_PYTHON_BINDINGS_BACKEND` (see
       [Python binding backends](#python-binding-backends) below):
-        * pybind11 >= 2.7 (tested through 3.0) -- needed for the `pybind11`
+        * pybind11 >= 2.7 (tested through 3.1) -- needed for the `pybind11`
           backend and for `both`. It is the auto-selected default when
           OpenImageIO is older than 3.2 or Python is older than 3.10.
-        * nanobind >= 2.8.0 (tested through 3.0), with Python >= 3.10 -- needed
+        * nanobind >= 2.8.0 (tested through 3.1), with Python >= 3.10 -- needed
           for the `nanobind` backend and for `both`. It is the auto-selected
           default when OpenImageIO is 3.2 or newer and Python is 3.10 or newer.
           Usually installed as a Python package (`pip install nanobind`, or
@@ -83,7 +83,7 @@ NEW or CHANGED minimum dependencies since the last major release are **bold**.
           asking the interpreter. If it is not installed, the build fetches and
           builds it locally (it is a small header/CMake package, not a
           compiled library).
-* (optional) Qt5 >= 5.6 or Qt6 (tested Qt5 through 5.15 and Qt6 through 6.10).
+* (optional) Qt5 >= 5.6 or Qt6 (tested Qt5 through 5.15 and Qt6 through 6.12).
   If not found at build time, the `osltoy` application will be disabled.
 
 

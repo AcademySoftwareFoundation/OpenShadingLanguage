@@ -1,0 +1,8 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader up(float a = 1, float b = 2, float c = 3, output float out = 0)
+{
+    out = a + b + c;
+}

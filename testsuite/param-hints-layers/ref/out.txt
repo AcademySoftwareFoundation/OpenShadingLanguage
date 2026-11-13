@@ -1,0 +1,19 @@
+Compiled mid.osl -> mid.oso
+Compiled tgt.osl -> tgt.oso
+Compiled up.osl -> up.oso
+case2
+tgt: s=1 t=1
+
+case4
+tgt: s=1 t=1
+
+case6
+tgt: s=0.5 t=0.5
+
+three
+tgt: s=0.5 t=1
+
+reparam
+tgt: s=0.5 t=1
+tgt: s=0.25 t=1
+

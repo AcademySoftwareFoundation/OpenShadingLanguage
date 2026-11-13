@@ -406,6 +406,7 @@ add_shader(cspan<const char*> argv)
     shadingsys->Shader(*shadergroup, "surface", shadername, layername);
     layername.clear();
     params.clear();
+    param_hints.clear();
     return 0;
 }
 
@@ -462,6 +463,7 @@ specify_expr(cspan<const char*> argv)
     shadingsys->Shader(*shadergroup, "surface", shadername, layername);
     layername.clear();
     params.clear();
+    param_hints.clear();
 }
 
 
@@ -520,7 +522,8 @@ add_param(ParamValueList& params, string_view command, string_view paramname,
     if ((type == TypeDesc::UNKNOWN || type == TypeMatrix)
         && parse_float_list(stringval, f, 16)) {
         params.emplace_back(paramname, TypeMatrix, 1, f);
-        param_hints.push_back(hint);
+        if (&params == &::params)  // add only to main params, not reparams
+            param_hints.push_back(hint);
         return;
     }
     // If it is or might be a vector type, look for 3 comma-separated floats
@@ -529,7 +532,8 @@ add_param(ParamValueList& params, string_view command, string_view paramname,
         if (type == TypeDesc::UNKNOWN)
             type = TypeVector;
         params.emplace_back(paramname, type, 1, f);
-        param_hints.push_back(hint);
+        if (&params == &::params)  // add only to main params, not reparams
+            param_hints.push_back(hint);
         return;
     }
     // If it is or might be an int, look for an int that takes up the whole
@@ -537,7 +541,8 @@ add_param(ParamValueList& params, string_view command, string_view paramname,
     if ((type == TypeDesc::UNKNOWN || type == TypeInt)
         && OIIO::Strutil::string_is<int>(stringval)) {
         params.emplace_back(paramname, OIIO::Strutil::stoi(stringval));
-        param_hints.push_back(hint);
+        if (&params == &::params)  // add only to main params, not reparams
+            param_hints.push_back(hint);
         return;
     }
     // If it is or might be an float, look for a float that takes up the
@@ -545,7 +550,8 @@ add_param(ParamValueList& params, string_view command, string_view paramname,
     if ((type == TypeDesc::UNKNOWN || type == TypeFloat)
         && OIIO::Strutil::string_is<float>(stringval)) {
         params.emplace_back(paramname, OIIO::Strutil::stof(stringval));
-        param_hints.push_back(hint);
+        if (&params == &::params)  // add only to main params, not reparams
+            param_hints.push_back(hint);
         return;
     }
 
@@ -558,7 +564,8 @@ add_param(ParamValueList& params, string_view command, string_view paramname,
             OIIO::Strutil::parse_char(stringval, ',');
         }
         params.emplace_back(paramname, type, 1, &vals[0]);
-        param_hints.push_back(hint);
+        if (&params == &::params)  // add only to main params, not reparams
+            param_hints.push_back(hint);
         return;
     }
 
@@ -571,7 +578,8 @@ add_param(ParamValueList& params, string_view command, string_view paramname,
             OIIO::Strutil::parse_char(stringval, ',');
         }
         params.emplace_back(paramname, type, 1, &vals[0]);
-        param_hints.push_back(hint);
+        if (&params == &::params)  // add only to main params, not reparams
+            param_hints.push_back(hint);
         return;
     }
 
@@ -584,14 +592,16 @@ add_param(ParamValueList& params, string_view command, string_view paramname,
         for (auto&& s : splitelements)
             strelements.push_back(ustring(s));
         params.emplace_back(paramname, type, 1, &strelements[0]);
-        param_hints.push_back(hint);
+        if (&params == &::params)  // add only to main params, not reparams
+            param_hints.push_back(hint);
         return;
     }
 
     // All remaining cases -- it's a string
     const char* s = ustring(stringval).c_str();
     params.emplace_back(paramname, TypeString, 1, &s);
-    param_hints.push_back(hint);
+    if (&params == &::params)  // add only to main params, not reparams
+        param_hints.push_back(hint);
 }
 
 

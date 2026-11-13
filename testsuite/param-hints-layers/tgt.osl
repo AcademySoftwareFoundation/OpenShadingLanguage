@@ -1,0 +1,12 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+// lockgeom=0 on the command line makes s,t come from userdata (u,v);
+// otherwise the default -1 (or a --param value) is used.
+shader tgt(float s = -1, float t = -1, output float result = 0)
+{
+    if (u > 0.7 && v > 0.7)
+        printf("tgt: s=%g t=%g\n", s, t);
+    result = s;
+}

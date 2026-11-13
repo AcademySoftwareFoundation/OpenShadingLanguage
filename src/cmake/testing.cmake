@@ -420,6 +420,7 @@ macro (osl_add_all_tests)
                 noise-perlin noise-simplex
                 noise-reg
                 normalize-reg
+                param-hints-layers
                 pnoise pnoise-cell pnoise-gabor
                 pnoise-generic pnoise-perlin
                 pnoise-reg

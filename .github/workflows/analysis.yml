@@ -2,6 +2,13 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
+# NOTE: Actions used here are locked in .github/workflows/actions.lock.
+# If you add, remove, or change the version of any `uses:` action (or add
+# a new workflow file), regenerate the lockfile and commit it:
+#     gh extension install github/gh-actions-lock   # once
+#     gh actions-lock
+# CI (lockfile.yml) runs `gh actions-lock --verify` and fails if stale.
+
 name: Analysis
 
 on:
@@ -24,6 +31,7 @@ on:
       - '!**/ci.yml'
       - '!**/docs.yml'
       - '!**/scorecard.yml'
+      - '!**/lockfile.yml'
       - '!**/wheel.yml'
       - '!**.properties'
       - '!docs/**'
@@ -101,10 +109,10 @@ jobs:
       # positives, every time we download a dependency. We should use it only
       # on CI runs where we are producing artifacts that users might rely on.
       # - name: Harden Runner
-      #   uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
+      #   uses: step-security/harden-runner@v2.20.1
       #   with:
       #     egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: '0'
       - name: Prepare ccache timestamp
@@ -112,7 +120,7 @@ jobs:
         run: echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
       - name: ccache
         id: ccache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache@v6.1.0
         with:
           path: /tmp/ccache
           key: ${{github.job}}-${{matrix.nametag}}-${{steps.ccache_cache_keys.outputs.date}}

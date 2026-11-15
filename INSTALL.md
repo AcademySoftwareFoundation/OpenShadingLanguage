@@ -57,7 +57,7 @@ NEW or CHANGED minimum dependencies since the last major release are **bold**.
       recommended that you use 11.0 or higher.
 
 * [Imath](https://github.com/AcademySoftwareFoundation/Imath) 3.1 or newer.
-* [Flex](https://github.com/westes/flex) 2.5.35 or newer and
+* [Flex](https://github.com/westes/flex) 2.3.35 or newer and
   [GNU Bison](https://www.gnu.org/software/bison/) 2.7 or newer.
   Note that on some MacOS/xcode releases, the system-installed Bison is too
   old, and it's better to install a newer Bison (via Homebrew is one way to

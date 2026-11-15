@@ -586,7 +586,7 @@ The current project leadership is documented in the
 [Governance](GOVERNANCE.md) file.
 
 Many people have contributed features, bug fixes, and other changes to OSL
-over the years: Steve Agland, Shane Ambler, Martijn Berger, Farchad
+over the years: Steve Agland, Shane Ambler, Oscar Anson, Martijn Berger, Farchad
 Bidgolirad, Alexandru Biscoveanu, Nicholas Bishop, Curtis Black, Rasmus
 Bonnedal, Solomon Boulos, Stefan Bruens, Stefan Büttner, Matthaus G. Chajdas,
 Clark Chen, Mehdi Chinoune, Alejandro Conty, Damien Courtois, Tomas Davidovic,
@@ -595,11 +595,11 @@ Louis Feng, Mark Final, Henri Fousse, Stephen Friedman, Syoyo Fujita, Alex
 Fuller, Tim Grant, Larry Gritz, Nicolas Guiard, Euan Haahr, Derek Haase,
 Sven-Hendrik Haase, John Haddon, Niklas Harrysson, Daniel Heckenberg, Chris
 Hellmuth, Christian Heusel, Adrien Herubel, Dan Horák, Thiago Ize, Matt
-Johnson, Ronan Keryell, Jinnie Kim, Chris Kulla, Elvic Liang, Max Liani, Sv. Lockal, Silvia Lopez,
+Johnson, Ronan Keryell, Jinnie Kim, Chris Kulla, Doug Letterman, Elvic Liang, Max Liani, Sv. Lockal, Silvia Lopez,
 Adam Martinez, John Mertic, Bastien Montagne, Steena Monteiro, Patrick Mours,
-Alexis Oblet, Erich Ocean, Mikko Ohtamaa, Jean-Francois Panisset, Jino Park,
+Alexis Oblet, Erich Ocean, Mikko Ohtamaa, Owen O'Malley, Jean-Francois Panisset, Jino Park,
 Alexei Pawlow, Jonathan Peters, Mitch Prater, Jay Reynolds, Declan Russell, Benoit Ruiz,
-Patrick Scheibe, Alex Schworer, Jonathan Scruggs, Sergey Sharybin, Mark
+Patrick Scheibe, Roeland Schoukens, Alex Schworer, Jonathan Scruggs, Sergey Sharybin, Mark
 Sisson, Sandip Shukla, Alexey Smolenchuk, Cliff Stein, Stephan Steinbach, Taraash, Luya
 Tshimbalanga, Esteban Tovagliari, Brecht Van Lommel, Thibault Vergne,
 Alexander von Knorring, Aidan Welch, Alex Wells, Roman Zulak. (Listed

@@ -214,7 +214,7 @@ jobs:
             sudo apt-get install -y g++-${{inputs.gcc_action_ver}}
       - name: Install python
         if: inputs.python_action_ver != ''
-        uses: actions/setup-python@v7.0.0
+        uses: actions/setup-python@v7.1.0
         with:
           python-version: ${{ inputs.python_action_ver }}
       - name: Dependencies
@@ -254,7 +254,7 @@ jobs:
           key: ${{ steps.deps-cache-key.outputs.key }}
       - name:  Install sonar-scanner and build-wrapper
         if: inputs.sonar == '1'
-        uses: sonarsource/sonarqube-scan-action@v8.2.1
+        uses: sonarsource/sonarqube-scan-action@v8.4.0
       - name: Build
         if: inputs.skip_build != '1'
         shell: bash
@@ -321,7 +321,7 @@ jobs:
             time make doxygen
             time make sphinx
       - name: Upload testsuite debugging artifacts
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         if: ${{ (failure() || inputs.build_docs == '1' || inputs.benchmark == '1' || inputs.abi_check != '') }}
         with:
           name: osl-${{github.job}}-${{inputs.nametag}}

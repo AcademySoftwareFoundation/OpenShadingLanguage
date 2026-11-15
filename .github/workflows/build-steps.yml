@@ -2,6 +2,13 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
+# NOTE: Actions used here are locked in .github/workflows/actions.lock.
+# If you add, remove, or change the version of any `uses:` action (or add
+# a new workflow file), regenerate the lockfile and commit it:
+#     gh extension install github/gh-actions-lock   # once
+#     gh actions-lock
+# CI (lockfile.yml) runs `gh actions-lock --verify` and fails if stale.
+
 ##########################################################################
 # Common steps for all CI workflows
 ##########################################################################
@@ -150,10 +157,10 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
       - name: Install LLVM and Clang
         if: inputs.llvm_action_ver != ''
-        uses: KyleMayes/install-llvm-action@ebc0426251bc40c7cd31162802432c68818ab8f0 # v2.0.9
+        uses: KyleMayes/install-llvm-action@v2.0.9
         with:
           version: ${{ inputs.llvm_action_ver }}
       - name: Build setup
@@ -167,7 +174,7 @@ jobs:
         run: echo "date=`date -u +'%Y-%m-%dT%H:%M:%SZ'`" >> $GITHUB_OUTPUT
       - name: ccache-restore
         id: ccache-restore
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@v6.1.0
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ${{inputs.nametag}}-${{steps.ccache_cache_keys.outputs.date}}
@@ -177,7 +184,7 @@ jobs:
         # per-file download quota. Cache it so most runs skip the download.
         id: llvm-cache-restore
         if: runner.os == 'Windows' && env.LLVM_GOOGLE_DRIVE_ID != ''
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@v6.1.0
         with:
           path: ~/llvm/llvm-build
           key: llvm-windows-${{ env.LLVM_GOOGLE_DRIVE_ID }}
@@ -193,7 +200,7 @@ jobs:
       - name: deps-cache-restore
         id: deps-cache-restore
         if: runner.os == 'Windows'
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@v6.1.0
         with:
           path: |
             ~/ext/dist
@@ -207,7 +214,7 @@ jobs:
             sudo apt-get install -y g++-${{inputs.gcc_action_ver}}
       - name: Install python
         if: inputs.python_action_ver != ''
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@v7.0.0
         with:
           python-version: ${{ inputs.python_action_ver }}
       - name: Dependencies
@@ -233,13 +240,13 @@ jobs:
             fi
       - name: llvm-cache-save
         if: runner.os == 'Windows' && env.LLVM_GOOGLE_DRIVE_ID != '' && steps.llvm-cache-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/save@v6.1.0
         with:
           path: ~/llvm/llvm-build
           key: llvm-windows-${{ env.LLVM_GOOGLE_DRIVE_ID }}
       - name: deps-cache-save
         if: runner.os == 'Windows' && steps.deps-cache-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/save@v6.1.0
         with:
           path: |
             ~/ext/dist
@@ -247,14 +254,14 @@ jobs:
           key: ${{ steps.deps-cache-key.outputs.key }}
       - name:  Install sonar-scanner and build-wrapper
         if: inputs.sonar == '1'
-        uses: sonarsource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
+        uses: sonarsource/sonarqube-scan-action@v8.2.1
       - name: Build
         if: inputs.skip_build != '1'
         shell: bash
         run: src/build-scripts/ci-build.bash
       - name: Check out ABI standard
         if: inputs.abi_check != ''
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
         with:
           ref: ${{inputs.abi_check}}
           path: abi_standard
@@ -268,7 +275,7 @@ jobs:
             popd
       - name: ccache-save
         id: ccache-save
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/save@v6.1.0
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ${{inputs.nametag}}-${{steps.ccache_cache_keys.outputs.date}}
@@ -314,7 +321,7 @@ jobs:
             time make doxygen
             time make sphinx
       - name: Upload testsuite debugging artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v7.0.1
         if: ${{ (failure() || inputs.build_docs == '1' || inputs.benchmark == '1' || inputs.abi_check != '') }}
         with:
           name: osl-${{github.job}}-${{inputs.nametag}}

@@ -2076,10 +2076,26 @@ BackendLLVM::prepare_module_for_cuda_jit()
     }
 
 #ifndef OSL_CUDA_NO_FTZ
+#    if OSL_LLVM_VERSION >= 230
+    // LLVM 23 and newer take the denormal mode only from the denormal_fpenv
+    // attribute, and convert the "denormal-fp-math" strings to it only when
+    // reading bitcode. Without it NVPTX doesn't flush denormals to zero in the
+    // group functions, nor in the library functions inlined into them. The
+    // modes are the ones the strings set: preserve-sign for every type, even
+    // though PTX never flushes f64 denormals.
+    const llvm::DenormalMode preserve_sign
+        = llvm::DenormalMode::getPreserveSign();
+    llvm::AttrBuilder ftz(ll.context());
+    ftz.addDenormalFPEnvAttr(llvm::DenormalFPEnv(preserve_sign, preserve_sign));
+#    endif
     for (llvm::Function& fn : *ll.module()) {
         fn.addFnAttr("nvptx-f32ftz", "true");
+#    if OSL_LLVM_VERSION >= 230
+        fn.addFnAttrs(ftz);
+#    else
         fn.addFnAttr("denormal-fp-math", "preserve-sign,preserve-sign");
         fn.addFnAttr("denormal-fp-math-f32", "preserve-sign,preserve-sign");
+#    endif
     }
 #endif
 }

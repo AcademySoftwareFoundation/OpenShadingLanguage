@@ -1869,9 +1869,8 @@ LLVM_Util::nvptx_target_machine()
 #else
             ModuleTriple.str(),
 #endif
-            // LLVM sets the PTX ISA version based on the CUDA_TARGET_ARCH
-            CUDA_TARGET_ARCH, "", options, llvm::Reloc::Static,
-            llvm::CodeModel::Small,
+            CUDA_TARGET_ARCH, OSL_NVPTX_PTX_FEATURE, options,
+            llvm::Reloc::Static, llvm::CodeModel::Small,
 #if OSL_LLVM_VERSION >= 180
             llvm::CodeGenOptLevel::Default
 #else

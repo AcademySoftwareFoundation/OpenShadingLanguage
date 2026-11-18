@@ -18,7 +18,7 @@ workflows:
     '.github/workflows/lockfile.yml':
         - 'actions/checkout@v7.0.1'
     '.github/workflows/release-notice.yml':
-        - 'jmertic/slack-release-notifier@20260930'
+        - 'linuxfoundation/slack-release-notifier@20261119'
     '.github/workflows/release-sign.yml':
         - 'actions/checkout@v7.0.1'
         - 'sigstore/gh-action-sigstore-python@v3.5.0'
@@ -28,6 +28,11 @@ workflows:
         - 'github/codeql-action@v4.39.1'
         - 'ossf/scorecard-action@v2.5.0'
 dependencies:
+    'abatilo/actions-poetry@3765cf608f2d4a72178a9fc5b918668e542b89b1':
+        ref: 'v4.0.0'
+        commit: 'sha1-3765cf608f2d4a72178a9fc5b918668e542b89b1'
+        owner_id: 1634746
+        repo_id: 189319169
     'actions/cache@v6.1.0':
         ref: 'v6.1.0'
         commit: 'sha1-55cc8345863c7cc4c66a329aec7e433d2d1c52a9'
@@ -38,6 +43,11 @@ dependencies:
         commit: 'sha1-3d3c42e5aac5ba805825da76410c181273ba90b1'
         owner_id: 44036562
         repo_id: 197814629
+    'actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0':
+        ref: 'v7.1.0'
+        commit: 'sha1-6d4fd22b20465ccc0f7354476588e8df7c9ca0e0'
+        owner_id: 44036562
+        repo_id: 192625525
     'actions/setup-python@v7.1.0':
         ref: 'v7.1.0'
         commit: 'sha1-6d4fd22b20465ccc0f7354476588e8df7c9ca0e0'
@@ -58,16 +68,19 @@ dependencies:
         commit: 'sha1-9b3254085494b55a0f7c4c2b3d2d52cc712ce370'
         owner_id: 9919
         repo_id: 259445878
-    'jmertic/slack-release-notifier@20260930':
-        ref: '20260930'
-        commit: 'sha1-4bf7813217739180f89eb869bf769efc07928368'
-        owner_id: 296737
-        repo_id: 732866724
     'kylemayes/install-llvm-action@v2.0.9':
         ref: 'v2.0.9'
         commit: 'sha1-ebc0426251bc40c7cd31162802432c68818ab8f0'
         owner_id: 1016104
         repo_id: 276521268
+    'linuxfoundation/slack-release-notifier@20261119':
+        ref: '20261119'
+        commit: 'sha1-3175c5a526af7aa9ffd458241f9d28de81363b69'
+        owner_id: 1040002
+        repo_id: 1438584736
+        uses:
+            - 'abatilo/actions-poetry@3765cf608f2d4a72178a9fc5b918668e542b89b1'
+            - 'actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0'
     'ossf/scorecard-action@v2.5.0':
         ref: 'v2.5.0'
         commit: 'sha1-fa7117db83c52d787ae5a89f350999701505d78e'

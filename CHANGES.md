@@ -3,7 +3,7 @@
 
 Release 1.16 (Dec 1, 2026) -- compared to 1.15
 -------------------------------------------------------------
-- Beta 1: Nov 15, 2026
+- Beta 1: Nov 17, 2026
 
 ### New minimum dependencies, toolchain, and compatibility changes:
   - Remove support for the deprecated Intel `icc` classic compiler [#2075](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2075)

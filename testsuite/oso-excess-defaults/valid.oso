@@ -1,0 +1,9 @@
+OpenShadingLanguage 1.00
+shader valid
+param	int	pi	7	%read{2147483647,-1} %write{2147483647,-1}
+param	color	c	1 2 3	%read{2147483647,-1} %write{2147483647,-1}
+param	float[]	fu	1 2 3 4	%read{2147483647,-1} %write{2147483647,-1}
+param	string[2]	sa	"a" "b"	%read{2147483647,-1} %write{2147483647,-1}
+global	point	P	%read{2147483647,-1} %write{2147483647,-1}
+code ___main___
+	end

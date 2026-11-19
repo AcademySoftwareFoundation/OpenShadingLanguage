@@ -1,0 +1,6 @@
+OpenShadingLanguage 1.00
+shader const_string
+const	string	$s1	"a" "b"	%read{2147483647,-1} %write{2147483647,-1}
+global	point	P	%read{2147483647,-1} %write{2147483647,-1}
+code ___main___
+	end

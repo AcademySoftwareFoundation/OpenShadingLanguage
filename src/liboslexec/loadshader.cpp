@@ -59,6 +59,11 @@ public:
     void add_param_default(int def, size_t offset, const Symbol& sym);
     void add_param_default(const char* def, size_t offset, const Symbol& sym);
 
+    // Check that the current symbol can accept another default value.
+    // Return true if so. If not, issue an error, set m_errors, and return
+    // false.
+    bool check_default_count(const Symbol& sym);
+
 private:
     ShadingSystemImpl& m_shadingsys;  ///< Reference to the shading system
     ShaderMaster::ref m_master;       ///< Reference to our master
@@ -218,11 +223,37 @@ OSOReaderToMaster::add_param_default(const char* def, size_t offset,
 
 
 
+bool
+OSOReaderToMaster::check_default_count(const Symbol& sym)
+{
+    const TypeSpec& ts(sym.typespec());
+    if (ts.is_unsized_array())
+        return true;  // unsized arrays grow as needed
+    TypeDesc t  = ts.simpletype();
+    int maxvals = int(t.aggregate) * t.numelements();
+    if (m_sym_default_index < maxvals)
+        return true;
+    if (m_sym_default_index == maxvals) {
+        // Only report the first excess value for each symbol
+        m_shadingsys.errorfmt(
+            "Parsing shader \"{}\": too many initial values for {} {} (expected {})",
+            m_master->shadername(), ts.c_str(), sym.name(), maxvals);
+        m_errors = true;
+    }
+    return false;
+}
+
+
+
 void
 OSOReaderToMaster::symdefault(int def)
 {
     OSL_DASSERT(m_master->m_symbols.size() && "symdefault but no sym");
     Symbol& sym(m_master->m_symbols.back());
+    if (!check_default_count(sym)) {
+        ++m_sym_default_index;
+        return;
+    }
     size_t offset = sym.dataoffset() + m_sym_default_index;
     ++m_sym_default_index;
 
@@ -254,6 +285,10 @@ OSOReaderToMaster::symdefault(float def)
 {
     OSL_DASSERT(m_master->m_symbols.size() && "symdefault but no sym");
     Symbol& sym(m_master->m_symbols.back());
+    if (!check_default_count(sym)) {
+        ++m_sym_default_index;
+        return;
+    }
     size_t offset = sym.dataoffset() + m_sym_default_index;
     ++m_sym_default_index;
     if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
@@ -280,6 +315,10 @@ OSOReaderToMaster::symdefault(const char* def)
 {
     OSL_DASSERT(m_master->m_symbols.size() && "symdefault but no sym");
     Symbol& sym(m_master->m_symbols.back());
+    if (!check_default_count(sym)) {
+        ++m_sym_default_index;
+        return;
+    }
     size_t offset = sym.dataoffset() + m_sym_default_index;
     ++m_sym_default_index;
     if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {

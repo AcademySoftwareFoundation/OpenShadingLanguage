@@ -1,0 +1,36 @@
+
+ERROR: Parsing shader "param_int": too many initial values for int pi (expected 1)
+ERROR: Unable to read "data/param_int.oso"
+ERROR: Could not find shader "data/param_int"
+        group: unnamed_group_1
+
+ERROR: Parsing shader "param_float_many": too many initial values for float pf (expected 1)
+ERROR: Unable to read "data/param_float_many.oso"
+ERROR: Could not find shader "data/param_float_many"
+        group: unnamed_group_1
+
+ERROR: Parsing shader "param_array": too many initial values for float[2] fa (expected 2)
+ERROR: Unable to read "data/param_array.oso"
+ERROR: Could not find shader "data/param_array"
+        group: unnamed_group_1
+
+ERROR: Parsing shader "param_string": too many initial values for string ps (expected 1)
+ERROR: Unable to read "data/param_string.oso"
+ERROR: Could not find shader "data/param_string"
+        group: unnamed_group_1
+
+ERROR: Parsing shader "const_int": too many initial values for int $c1 (expected 1)
+ERROR: Unable to read "data/const_int.oso"
+ERROR: Could not find shader "data/const_int"
+        group: unnamed_group_1
+
+ERROR: Parsing shader "const_float": too many initial values for float $c1 (expected 1)
+ERROR: Unable to read "data/const_float.oso"
+ERROR: Could not find shader "data/const_float"
+        group: unnamed_group_1
+
+ERROR: Parsing shader "const_string": too many initial values for string $s1 (expected 1)
+ERROR: Unable to read "data/const_string.oso"
+ERROR: Could not find shader "data/const_string"
+        group: unnamed_group_1
+

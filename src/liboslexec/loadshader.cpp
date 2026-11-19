@@ -64,6 +64,12 @@ public:
     // false.
     bool check_default_count(const Symbol& sym);
 
+    // Check that every op's jump targets are valid addresses. Jumps can
+    // only be checked after all ops are read, since they point forward.
+    // Return true if all are valid. If not, issue an error, set m_errors,
+    // and return false.
+    bool check_jumps();
+
 private:
     ShadingSystemImpl& m_shadingsys;  ///< Reference to the shading system
     ShaderMaster::ref m_master;       ///< Reference to our master
@@ -91,7 +97,7 @@ OSOReaderToMaster::parse_file(const std::string& filename)
     m_master->m_maincodeend   = 0;
     m_codesection.clear();
     m_codesym = -1;
-    return OSOReader::parse_file(filename) && !m_errors;
+    return OSOReader::parse_file(filename) && check_jumps() && !m_errors;
 }
 
 
@@ -104,7 +110,7 @@ OSOReaderToMaster::parse_memory(const std::string& oso)
     m_master->m_maincodeend   = 0;
     m_codesection.clear();
     m_codesym = -1;
-    return OSOReader::parse_memory(oso) && !m_errors;
+    return OSOReader::parse_memory(oso) && check_jumps() && !m_errors;
 }
 
 
@@ -572,6 +578,36 @@ void
 OSOReaderToMaster::instruction_jump(int target)
 {
     m_master->m_ops.back().add_jump(target);
+}
+
+
+
+bool
+OSOReaderToMaster::check_jumps()
+{
+    // A jump target must lie after the op itself (oslc only generates
+    // forward jumps; loops are encoded as sections that follow the loop
+    // op), and no further than one past the last op. Anything else would
+    // later be used to index op-sized arrays out of bounds, e.g. in the
+    // runtime optimizer's find_conditionals().
+    int nops = int(m_master->m_ops.size());
+    for (int opnum = 0; opnum < nops; ++opnum) {
+        const Opcode& op(m_master->m_ops[opnum]);
+        for (unsigned int j = 0; j < Opcode::max_jumps; ++j) {
+            int target = op.jump(j);
+            if (target < 0)
+                continue;  // -1 means "no jump"
+            if (target <= opnum || target > nops) {
+                m_shadingsys.errorfmt(
+                    "Parsing shader \"{}\": op {} ({}) has invalid jump target {} (must be in {}..{})",
+                    m_master->shadername(), opnum, op.opname(), target,
+                    opnum + 1, nops);
+                m_errors = true;
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 

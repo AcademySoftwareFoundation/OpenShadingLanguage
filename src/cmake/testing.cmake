@@ -447,6 +447,7 @@ macro (osl_add_all_tests)
                 oslinfo-arrayparams oslinfo-colorctrfloat
                 oslinfo-metadata oslinfo-noparams
                 osl-imageio
+                oso-excess-defaults
                 paramval-floatpromotion
                 pragma-nowarn
                 printf-reg

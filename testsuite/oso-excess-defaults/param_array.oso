@@ -1,0 +1,6 @@
+OpenShadingLanguage 1.00
+shader param_array
+param	float[2]	fa	1 2 3	%read{2147483647,-1} %write{2147483647,-1}
+global	point	P	%read{2147483647,-1} %write{2147483647,-1}
+code ___main___
+	end

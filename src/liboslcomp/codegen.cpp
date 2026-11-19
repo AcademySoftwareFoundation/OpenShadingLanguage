@@ -619,8 +619,10 @@ ASTNode::one_default_literal(const Symbol* sym, ASTNode* init, std::string& out,
 {
     // FIXME -- this only works for single values or arrays made of
     // literals.  Needs to be seriously beefed up.
+    // Only downcast once we know init really is a literal: casting to the
+    // wrong derived type is UB even if the result is never dereferenced.
     bool islit      = init && init->nodetype() == ASTNode::literal_node;
-    ASTliteral* lit = static_cast<ASTliteral*>(init);
+    ASTliteral* lit = islit ? static_cast<ASTliteral*>(init) : nullptr;
     bool completed  = true;  // have we output the full initialization?
     TypeSpec type   = sym->typespec().elementtype();
     if (type.is_closure()) {

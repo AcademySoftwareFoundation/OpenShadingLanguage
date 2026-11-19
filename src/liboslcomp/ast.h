@@ -191,15 +191,11 @@ public:
     /// Reverse the order of the list.
     friend ASTNode::ref reverse(ASTNode::ref list);
 
-    /// What source file was this parse node created from?
+    /// What location in the source file was this parse node created from?
     ///
-    ustring sourcefile() const { return m_sourcefile; }
+    const SrcLoc sourceloc() const { return m_srcloc; }
 
-    /// What line of the source file was this parse node created from?
-    ///
-    int sourceline() const { return m_sourceline; }
-
-    void sourceline(int line) { m_sourceline = line; }
+    void sourceloc(const SrcLoc& loc) { m_srcloc = loc; }
 
     template<typename... Args>
     void errorfmt(const char* format, const Args&... args) const
@@ -407,8 +403,7 @@ protected:
     NodeType m_nodetype;          ///< Type of node this is
     ref m_next;                   ///< Next node in the list
     OSLCompilerImpl* m_compiler;  ///< Back-pointer to the compiler
-    ustring m_sourcefile;  ///< Filename of source where the node came from
-    int m_sourceline;      ///< Line number in source where the node came from
+    SrcLoc m_srcloc;              ///< Location in source where the node came from
     std::vector<ref> m_children;  ///< Child nodes
     int m_op;                     ///< Operator selection
     TypeSpec m_typespec;          ///< Data type of this node
@@ -445,7 +440,7 @@ class ASTfunction_declaration final : public ASTNode {
 public:
     ASTfunction_declaration(OSLCompilerImpl* comp, TypeSpec type, ustring name,
                             ASTNode* form, ASTNode* stmts, ASTNode* meta,
-                            int sourceline_start = -1);
+                            const SrcLoc& srcloc_start);
     const char* nodetypename() const { return "function_declaration"; }
     const char* childname(size_t i) const;
     void print(std::ostream& out, int indentlevel = 0) const;
@@ -476,7 +471,7 @@ public:
     ASTvariable_declaration(OSLCompilerImpl* comp, const TypeSpec& type,
                             ustring name, ASTNode* init, bool isparam,
                             bool ismeta, bool isoutput, bool initlist,
-                            int sourceline_start = -1);
+                            const SrcLoc& srcloc_start);
     const char* nodetypename() const;
     const char* childname(size_t i) const;
     void print(std::ostream& out, int indentlevel = 0) const;

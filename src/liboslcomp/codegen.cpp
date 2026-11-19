@@ -65,7 +65,7 @@ OSLCompilerImpl::insert_code(int opnum, const char* opname, size_t nargs,
 {
     Opcode op(ustring(opname), m_codegenmethod, m_opargs.size(), nargs);
     if (node)
-        op.source(node->sourcefile(), node->sourceline());
+        op.source(node->sourceloc());
     m_ircode.insert(m_ircode.begin() + opnum, op);
     add_op_args(nargs, args);
 
@@ -136,8 +136,7 @@ OSLCompilerImpl::add_struct_fields(StructSpec* structspec, ustring basename,
         int arr           = type.arraylength();
         if (arr && arraylen) {
             errorfmt(
-                node ? node->sourcefile() : ustring(),
-                node ? node->sourceline() : 1,
+                node ? node->sourceloc() : SrcLoc(),
                 "Nested structs with >1 levels of arrays are not allowed: {}",
                 structspec->name());
         }

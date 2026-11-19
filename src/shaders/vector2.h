@@ -182,6 +182,11 @@ vector2 mix(vector2 a, vector2 b, float x )
     return vector2 (mix(a.x, b.x, x), mix(a.y, b.y, x));
 }
 
+vector2 unmix(vector2 a, vector2 b, float x )
+{
+    return vector2 (unmix(a.x, b.x, x), unmix(a.y, b.y, x));
+}
+
 float dot(vector2 a, vector2 b)
 {
     return (a.x * b.x + a.y * b.y);

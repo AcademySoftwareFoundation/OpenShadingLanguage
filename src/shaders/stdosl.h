@@ -164,6 +164,20 @@ float  mix (float  x, float  y, float  a) BUILTIN;
 closure color mix (closure color x, closure color y, float a) { return x*(1-a) + y*a; }
 closure color mix (closure color x, closure color y, color a) { return x*(1-a) + y*a; }
 
+normal unmix (normal x, normal y, normal a) { return (a - x) / (y - x); }
+normal unmix (normal x, normal y, float  a) { return (a - x) / (y - x); }
+vector unmix (vector x, vector y, vector a) { return (a - x) / (y - x); }
+vector unmix (vector x, vector y, float  a) { return (a - x) / (y - x); }
+point  unmix (point  x, point  y, point  a) { return (a - x) / (y - x); }
+point  unmix (point  x, point  y, float  a) { return (a - x) / (y - x); }
+color  unmix (color  x, color  y, color  a) { return (a - x) / (y - x); }
+color  unmix (color  x, color  y, float  a) { return (a - x) / (y - x); }
+float  unmix (float  x, float  y, float  a) { return (a - x) / (y - x); }
+// closure color unmix (closure color x, closure color y, float a) { return (a - x) / (y - x); }
+// closure color unmix (closure color x, closure color y, color a) { return (a - x) / (y - x); }
+
+// TODO: ADD REMAP FROM MIX AND UNMIX
+
 normal select (normal x, normal y, normal cond) BUILTIN;
 vector select (vector x, vector y, vector cond) BUILTIN;
 point  select (point  x, point  y, point  cond) BUILTIN;

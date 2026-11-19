@@ -1,0 +1,6 @@
+
+ERROR: Parsing shader "structfields_on_float": %structfields hint on non-struct symbol f
+ERROR: Unable to read "data/structfields_on_float.oso"
+ERROR: Could not find shader "data/structfields_on_float"
+        group: unnamed_group_1
+

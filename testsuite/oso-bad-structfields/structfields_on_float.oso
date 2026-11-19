@@ -1,0 +1,7 @@
+OpenShadingLanguage 1.00
+shader structfields_on_float
+oparam	float	f	0		%read{2147483647,-1} %write{0,0} %structfields{s,t}
+global	float	u	%read{0,0} %write{2147483647,-1}
+code ___main___
+	assign		f u 	%argrw{"wr"}
+	end

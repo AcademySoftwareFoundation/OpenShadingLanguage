@@ -1,0 +1,11 @@
+OpenShadingLanguage 1.00
+shader valid
+oparam	struct OsoBadStructfields	Aout			%read{2147483647,-1} %write{2147483647,-1} %struct{"OsoBadStructfields"} %structfields{s,t} %structfieldtypes{"ff"} %structnfields{2}
+oparam	float	Aout.s	-1		%read{2147483647,-1} %write{0,0} %mystruct{Aout} %mystructfield{0}
+oparam	float	Aout.t	-1		%read{2147483647,-1} %write{1,1} %mystruct{Aout} %mystructfield{1}
+global	float	u	%read{0,0} %write{2147483647,-1}
+global	float	v	%read{1,1} %write{2147483647,-1}
+code ___main___
+	assign		Aout.s u 	%argrw{"wr"}
+	assign		Aout.t v 	%argrw{"wr"}
+	end

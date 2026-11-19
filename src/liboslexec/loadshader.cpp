@@ -376,6 +376,14 @@ OSOReaderToMaster::hint(string_view hintstring)
         && m_master->m_symbols.size()) {
         Symbol& sym(m_master->m_symbols.back());
         StructSpec* structspec = sym.typespec().structspec();
+        if (!structspec) {
+            // Only struct symbols may carry a list of struct fields.
+            m_shadingsys.errorfmt(
+                "Parsing shader \"{}\": %structfields hint on non-struct symbol {}",
+                m_master->shadername(), sym.name());
+            m_errors = true;
+            return;
+        }
         if (structspec->numfields() == 0) {
             while (1) {
                 std::string afield = Strutil::parse_until(h, ",}");

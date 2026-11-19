@@ -15,12 +15,13 @@
 ###########################################################################
 # Print some basic status about the system and compiler
 #
-message (VERBOSE "CMAKE_SYSTEM_NAME      = ${CMAKE_SYSTEM_NAME}")
-message (VERBOSE "CMAKE_SYSTEM_VERSION   = ${CMAKE_SYSTEM_VERSION}")
-message (VERBOSE "CMAKE_SYSTEM_PROCESSOR = ${CMAKE_SYSTEM_PROCESSOR}")
-message (STATUS  "CMAKE_CXX_COMPILER     = ${CMAKE_CXX_COMPILER}")
-message (STATUS  "CMAKE_CXX_COMPILER_ID  = ${CMAKE_CXX_COMPILER_ID}")
-message (VERBOSE "CMAKE_CXX_COMPILE_FEATURES = ${CMAKE_CXX_COMPILE_FEATURES}")
+message (VERBOSE "CMAKE_SYSTEM_NAME           = ${CMAKE_SYSTEM_NAME}")
+message (VERBOSE "CMAKE_SYSTEM_VERSION        = ${CMAKE_SYSTEM_VERSION}")
+message (VERBOSE "CMAKE_SYSTEM_PROCESSOR      = ${CMAKE_SYSTEM_PROCESSOR}")
+message (STATUS  "CMAKE_CXX_COMPILER          = ${CMAKE_CXX_COMPILER}")
+message (STATUS  "CMAKE_CXX_COMPILER_VERSION  = ${CMAKE_CXX_COMPILER_VERSION}")
+message (STATUS  "CMAKE_CXX_COMPILER_ID       = ${CMAKE_CXX_COMPILER_ID}")
+message (VERBOSE "CMAKE_CXX_COMPILE_FEATURES  = ${CMAKE_CXX_COMPILE_FEATURES}")
 
 
 ###########################################################################
@@ -46,12 +47,10 @@ set (CSTD_FLAGS "-std=c++${CMAKE_CXX_STANDARD}")
 #
 
 if (CMAKE_COMPILER_IS_GNUCC)
-    execute_process (COMMAND ${CMAKE_CXX_COMPILER} -dumpversion
-                     OUTPUT_VARIABLE GCC_VERSION
-                     OUTPUT_STRIP_TRAILING_WHITESPACE)
+    set (GCC_VERSION ${CMAKE_CXX_COMPILER_VERSION})
     message (VERBOSE "Using gcc ${GCC_VERSION} as the compiler")
-    if (GCC_VERSION VERSION_LESS 9.0)
-        message (ERROR "gcc minimum version is 9.0")
+    if (GCC_VERSION VERSION_LESS 9.3)
+        message (FATAL_ERROR "gcc minimum version is 9.3")
     endif ()
 else ()
     set (GCC_VERSION 0)
@@ -72,7 +71,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER MATCHES "[Cc]lan
         set (ANY_CLANG_VERSION_STRING ${APPLECLANG_VERSION_STRING})
         message (VERBOSE "The compiler is Clang: ${CMAKE_CXX_COMPILER_ID} version ${APPLECLANG_VERSION_STRING}")
         if (APPLECLANG_VERSION_STRING VERSION_LESS 5.0)
-            message (ERROR "Apple clang minimum version is 5.0")
+            message (FATAL_ERROR "Apple clang minimum version is 5.0")
         elseif (APPLECLANG_VERSION_STRING VERSION_LESS 10.0)
             message (WARNING "Apple clang minimum version is 10.0. Older versions might work, but we don't test or support them.")
         endif ()
@@ -87,7 +86,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER MATCHES "[Cc]lan
         set (ANY_CLANG_VERSION_STRING ${CLANG_VERSION_STRING})
         message (VERBOSE "The compiler is Clang: ${CMAKE_CXX_COMPILER_ID} version ${CLANG_VERSION_STRING}")
         if (CLANG_VERSION_STRING VERSION_LESS 5.0)
-            message (ERROR "clang minimum version is 5.0")
+            message (FATAL_ERROR "clang minimum version is 5.0")
         elseif (CLANG_VERSION_STRING VERSION_LESS 10.0)
             message (WARNING "clang minimum version is 10.0. Older versions might work, but we don't test or support them.")
         endif ()

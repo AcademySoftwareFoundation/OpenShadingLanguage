@@ -123,6 +123,7 @@ message(STATUS "OSL_USE_OPTIX: ${OSL_USE_OPTIX}")
 set (OPTIX_EXTRA_LIBS CACHE STRING "Extra lib targets needed for OptiX")
 set (CUDA_EXTRA_LIBS CACHE STRING "Extra lib targets needed for CUDA")
 set (CUDA_TARGET_ARCH "sm_60" CACHE STRING "CUDA GPU architecture (e.g. sm_50)")
+set (CUDA_PTX_MIN_VERSION "60" CACHE STRING "Minimum PTX ISA version for LLVM output (e.g. 65 for 6.5)")
 set (OSL_SHADER_INSTALL_DIR "${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}/shaders"
      CACHE STRING "Directory where shaders will be installed")
 set (OSL_PTX_INSTALL_DIR "${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}/ptx"

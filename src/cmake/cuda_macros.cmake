@@ -6,6 +6,14 @@ set (OSL_EXTRA_NVCC_ARGS "" CACHE STRING "Custom args passed to nvcc when compil
 set (CUDA_OPT_FLAG_NVCC "-O3" CACHE STRING "The optimization level to use when compiling CUDA/C++ files with nvcc")
 set (CUDA_OPT_FLAG_CLANG "-O3" CACHE STRING "The optimization level to use when compiling CUDA/C++ files with clang")
 
+# Some LLVM versions have bugs where emitted instructions are only gated by
+# target architecture, regardless of PTX ISA support for those instructions.
+if (NOT CUDA_PTX_MIN_VERSION MATCHES "^[0-9]+$")
+  message (FATAL_ERROR "CUDA_PTX_MIN_VERSION must be an integer such as 60 or 65")
+endif ()
+set (OSL_NVPTX_PTX_FEATURE "+ptx${CUDA_PTX_MIN_VERSION}")
+set (OSL_NVPTX_PTX_FLAG "-mattr=${OSL_NVPTX_PTX_FEATURE}")
+
 # FTZ is enabled by default since it offers the best performance,
 # but it may be disabled to debug numerical issues, to better match
 # host behavior, etc.
@@ -252,7 +260,8 @@ function ( CUDA_SHADEOPS_COMPILE prefix output_bc output_ptx input_srcs headers 
     add_custom_command ( OUTPUT ${linked_bc} ${linked_ptx}
         COMMAND ${LLVM_LINK_TOOL} ${shadeops_bc_list} -o ${linked_bc}
         COMMAND ${LLVM_OPT_TOOL} ${opt_tool_flags} ${linked_bc} -o ${linked_bc}
-        COMMAND ${LLVM_LLC_TOOL} --march=nvptx64 -mcpu=${CUDA_TARGET_ARCH} ${linked_bc} -o ${linked_ptx}
+        COMMAND ${LLVM_LLC_TOOL} --march=nvptx64 -mcpu=${CUDA_TARGET_ARCH}
+            ${OSL_NVPTX_PTX_FLAG} ${linked_bc} -o ${linked_ptx}
         # This script converts all of the .weak functions defined in the PTX into .visible functions.
         COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/build-scripts/process-ptx.py"
             ${linked_ptx} ${linked_ptx}

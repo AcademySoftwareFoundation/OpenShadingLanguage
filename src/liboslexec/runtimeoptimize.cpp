@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <limits>
 #include <vector>
 
 #include <OpenImageIO/sysutil.h>
@@ -584,20 +585,24 @@ RuntimeOptimizer::insert_code(int opnum, ustring opname,
     // Inserting the instruction may change the read/write ranges of
     // symbols.  Not adjusting this can throw off other optimizations.
     if (recompute_rw_ranges) {
+        // Don't increment INT_MAX: it is the "always used" sentinel set by
+        // Symbol::mark_always_used(), and incrementing it would overflow
+        // (wrapping negative, which makes the symbol look unused).
+        const int always = std::numeric_limits<int>::max();
         for (auto&& s : inst()->symbols()) {
             if (s.everread()) {
                 int first = s.firstread(), last = s.lastread();
-                if (first >= opnum)
+                if (first >= opnum && first != always)
                     ++first;
-                if (last >= opnum)
+                if (last >= opnum && last != always)
                     ++last;
                 s.set_read(first, last);
             }
             if (s.everwritten()) {
                 int first = s.firstwrite(), last = s.lastwrite();
-                if (first >= opnum)
+                if (first >= opnum && first != always)
                     ++first;
-                if (last >= opnum)
+                if (last >= opnum && last != always)
                     ++last;
                 s.set_write(first, last);
             }

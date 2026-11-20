@@ -1304,7 +1304,7 @@ DECLFOLDER(constfold_format)
     // Try to turn R=format(fmt,...) into R=C
     Opcode& op(rop.inst()->ops()[opnum]);
     Symbol& Format(*rop.opargsym(op, 1));
-    if (!Format.is_constant())
+    if (!Format.is_constant() || !Format.typespec().is_string())
         return 0;
     ustring fmt = Format.get_string();
 

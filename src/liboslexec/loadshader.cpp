@@ -438,7 +438,7 @@ OSOReaderToMaster::hint(string_view hintstring)
         // Fix old bug where oslc forgot to mark getmatrix last arg as write
         ustring opname = m_master->m_ops.back().opname();
         static ustring getmatrix("getmatrix");
-        if (opname == getmatrix)
+        if (opname == getmatrix && m_nargs > 0)
             m_master->m_ops.back().argwriteonly(m_nargs - 1);
         // Fix old bug where oslc forgot to mark regex results as write.
         // This was a bug prior to 1.10.

@@ -1863,6 +1863,8 @@ BatchedBackendLLVM::build_llvm_code(int beginop, int endop,
         const Opcode& op        = inst()->ops()[opnum];
         const OpDescriptor* opd = shadingsys().op_descriptor(op.opname());
         if (opd && opd->llvmgenwide) {
+            // The loader checked arg counts; ops made since must comply too.
+            OSL_DASSERT(opd->nargs_ok(op.nargs()));
             if (shadingsys().debug_uninit() /* debug uninitialized vals */)
                 llvm_generate_debug_uninit(op);
             if (shadingsys().llvm_debug_ops())

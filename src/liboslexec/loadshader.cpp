@@ -86,7 +86,8 @@ private:
     int m_sym_default_index;          ///< Next sym default value to fill in
     bool m_errors;                    ///< Did we hit any errors?
     typedef std::unordered_map<ustring, int> UstringIntMap;
-    UstringIntMap m_symmap;  ///< map sym name to index
+    UstringIntMap m_symmap;                  ///< map sym name to index
+    const OpDescriptor* m_opdesc = nullptr;  ///< Descriptor of current op
 };
 
 
@@ -556,6 +557,7 @@ OSOReaderToMaster::instruction(int /*label*/, const char* opcode)
     m_nargs                = 0;
     m_reading_instruction  = true;
     const OpDescriptor* od = m_shadingsys.op_descriptor(uopcode);
+    m_opdesc               = od;
     if (od) {
         // Replace the name in case it was aliased for compatibility
         uopcode = od->name;
@@ -648,9 +650,30 @@ OSOReaderToMaster::check_jumps()
 void
 OSOReaderToMaster::instruction_end()
 {
-    m_master->m_ops.back().set_args(m_firstarg, m_nargs);
-    m_master->m_ops.back().source(m_sourcefile, m_sourceline);
+    Opcode& op(m_master->m_ops.back());
+    op.set_args(m_firstarg, m_nargs);
+    op.source(m_sourcefile, m_sourceline);
     m_reading_instruction = false;
+    // Reject an op with the wrong number of args, so that code generators
+    // and constant folders can count on the args they need being present.
+    if (m_opdesc && !m_opdesc->nargs_ok(int(m_nargs))) {
+        if (m_opdesc->minargs == m_opdesc->maxargs)
+            m_shadingsys.errorfmt(
+                "Parsing shader \"{}\": op {} ({}) has {} args (expected {})",
+                m_master->shadername(), m_master->m_ops.size() - 1, op.opname(),
+                m_nargs, m_opdesc->minargs);
+        else if (m_opdesc->maxargs == OpDescriptor::AnyNumArgs)
+            m_shadingsys.errorfmt(
+                "Parsing shader \"{}\": op {} ({}) has {} args (expected at least {})",
+                m_master->shadername(), m_master->m_ops.size() - 1, op.opname(),
+                m_nargs, m_opdesc->minargs);
+        else
+            m_shadingsys.errorfmt(
+                "Parsing shader \"{}\": op {} ({}) has {} args (expected {}..{})",
+                m_master->shadername(), m_master->m_ops.size() - 1, op.opname(),
+                m_nargs, m_opdesc->minargs, m_opdesc->maxargs);
+        m_errors = true;
+    }
 }
 
 

@@ -1287,194 +1287,219 @@ shading_system_setup_op_descriptors(
 {
     // clang-format off
 #if OSL_USE_BATCHED
-#define OP2(alias,name,ll,fold,simp,flag)                                \
+#define OP2(alias,name,ll,fold,simp,flag,amin,amax)                      \
     extern bool llvm_gen_##ll (BatchedBackendLLVM &rop, int opnum);      \
     extern bool llvm_gen_##ll (BackendLLVM &rop, int opnum);             \
     extern int  constfold_##fold (RuntimeOptimizer &rop, int opnum);     \
     op_descriptor[ustring(#alias)] = OpDescriptor(#name, llvm_gen_##ll,  \
                                                   llvm_gen_##ll,         \
-                                                  constfold_##fold, simp, flag);
+                                                  constfold_##fold, simp, flag, \
+                                                  amin, amax);
 #else
-#define OP2(alias,name,ll,fold,simp,flag)                                \
+#define OP2(alias,name,ll,fold,simp,flag,amin,amax)                      \
     extern bool llvm_gen_##ll (BackendLLVM &rop, int opnum);             \
     extern int  constfold_##fold (RuntimeOptimizer &rop, int opnum);     \
     op_descriptor[ustring(#alias)] = OpDescriptor(#name, llvm_gen_##ll,  \
-                                                  constfold_##fold, simp, flag);
+                                                  constfold_##fold, simp, flag, \
+                                                  amin, amax);
 #endif
 
-#define OP(name,ll,fold,simp,flag) OP2(name,name,ll,fold,simp,flag)
+#define OP(name,ll,fold,simp,flag,amin,amax) \
+    OP2(name,name,ll,fold,simp,flag,amin,amax)
 #define TEX OpDescriptor::Tex
 #define SIDE OpDescriptor::SideEffects
 #define STRCHARS OpDescriptor::StrChars
 #define STRCREATE OpDescriptor::StrCreate
+#define ANY OpDescriptor::AnyNumArgs
 
-    // name          llvmgen              folder         simple     flags
-    OP (aassign,     aassign,             aassign,       false,     0);
-    OP (abs,         generic,             abs,           true,      0);
-    OP (acos,        generic,             acos,          true,      0);
-    OP (add,         add,                 add,           true,      0);
-    OP (and,         andor,               and,           true,      0);
-    OP (area,        area,                deriv,         true,      0);
-    OP (aref,        aref,                aref,          true,      0);
-    OP (arraycopy,   arraycopy,           none,          false,     0);
-    OP (arraylength, arraylength,         arraylength,   true,      0);
-    OP (asin,        generic,             asin,          true,      0);
-    OP (assign,      assign,              none,          true,      0);
-    OP (atan,        generic,             none,          true,      0);
-    OP (atan2,       generic,             none,          true,      0);
-    OP (backfacing,  get_simple_SG_field, none,          true,      0);
-    OP (bitand,      bitwise_binary_op,   bitand,        true,      0);
-    OP (bitor,       bitwise_binary_op,   bitor,         true,      0);
-    OP (blackbody,   blackbody,           none,          true,      0);
-    OP (break,       loopmod_op,          none,          false,     0);
-    OP (calculatenormal, calculatenormal, none,          true,      0);
-    OP (cbrt,        generic,             cbrt,          true,      0);
-    OP (ceil,        generic,             ceil,          true,      0);
-    OP (cellnoise,   noise,               noise,         true,      0);
-    OP (clamp,       clamp,               clamp,         true,      0);
-    OP (closure,     closure,             none,          true,      0);
-    OP (color,       construct_color,     triple,        true,      0);
-    OP (compassign,  compassign,          compassign,    false,     0);
-    OP (compl,       unary_op,            compl,         true,      0);
-    OP (compref,     compref,             compref,       true,      0);
-    OP (concat,      generic,             concat,        true,      STRCREATE);
-    OP (continue,    loopmod_op,          none,          false,     0);
-    OP (cos,         generic,             cos,           true,      0);
-    OP (cosh,        generic,             none,          true,      0);
-    OP (cross,       generic,             none,          true,      0);
-    OP (degrees,     generic,             degrees,       true,      0);
-    OP (determinant, generic,             none,          true,      0);
-    OP (dict_find,   dict_find,           none,          false,     0);
-    OP (dict_next,   dict_next,           none,          false,     0);
-    OP (dict_value,  dict_value,          none,          false,     0);
-    OP (distance,    generic,             none,          true,      0);
-    OP (div,         div,                 div,           true,      0);
-    OP (dot,         generic,             dot,           true,      0);
-    OP (Dx,          DxDy,                deriv,         true,      0);
-    OP (Dy,          DxDy,                deriv,         true,      0);
-    OP (Dz,          Dz,                  deriv,         true,      0);
-    OP (dowhile,     loop_op,             none,          false,     0);
-    OP (end,         end,                 none,          false,     0);
-    OP (endswith,    generic,             endswith,      true,      STRCHARS);
-    OP (environment, environment,         none,          true,      TEX);
-    OP (eq,          compare_op,          eq,            true,      0);
-    OP (erf,         generic,             erf,           true,      0);
-    OP (erfc,        generic,             erfc,          true,      0);
-    OP (error,       printf,              none,          false,     SIDE);
-    OP (exit,        return,              none,          false,     0);
-    OP (exp,         generic,             exp,           true,      0);
-    OP (exp2,        generic,             exp2,          true,      0);
-    OP (expm1,       generic,             expm1,         true,      0);
-    OP (fabs,        generic,             abs,           true,      0);
-    OP (filterwidth, filterwidth,         deriv,         true,      0);
-    OP (floor,       generic,             floor,         true,      0);
-    OP (fmod,        modulus,             none,          true,      0);
-    OP (for,         loop_op,             none,          false,     0);
-    OP (format,      printf,              format,        true,      STRCREATE);
-    OP (fprintf,     printf,              none,          false,     SIDE);
-    OP (functioncall, functioncall,       functioncall,  false,     0);
-    OP (functioncall_nr,functioncall_nr,  none,          false,     0);
-    OP (ge,          compare_op,          ge,            true,      0);
-    OP (getattribute, getattribute,       getattribute,  false,     0);
-    OP (getchar,      generic,            getchar,       true,      STRCHARS);
-    OP (getmatrix,   getmatrix,           getmatrix,     false,     0);
-    OP (getmessage,  getmessage,          getmessage,    false,     0);
-    OP (gettextureinfo, gettextureinfo,   gettextureinfo,false,     TEX);
-    OP (gt,          compare_op,          gt,            true,      0);
-    OP (hash,        generic,             hash,          true,      0);
-    OP (hashnoise,   noise,               noise,         true,      0);
-    OP (if,          if,                  if,            false,     0);
-    OP (inversesqrt, generic,             inversesqrt,   true,      0);
-    OP (isconnected, generic,             none,          true,      0);
-    OP (isconstant,  isconstant,          isconstant,    true,      0);
-    OP (isfinite,    generic,             none,          true,      0);
-    OP (isinf,       generic,             none,          true,      0);
-    OP (isnan,       generic,             none,          true,      0);
-    OP (le,          compare_op,          le,            true,      0);
-    OP (length,      generic,             none,          true,      0);
-    OP (log,         generic,             log,           true,      0);
-    OP (log10,       generic,             log10,         true,      0);
-    OP (log2,        generic,             log2,          true,      0);
-    OP (logb,        generic,             logb,          true,      0);
-    OP (lt,          compare_op,          lt,            true,      0);
-    OP (luminance,   luminance,           none,          true,      0);
-    OP (matrix,      matrix,              matrix,        true,      0);
-    OP (max,         minmax,              max,           true,      0);
-    OP (mxcompassign, mxcompassign,       mxcompassign,  false,     0);
-    OP (mxcompref,   mxcompref,           none,          true,      0);
-    OP (min,         minmax,              min,           true,      0);
-    OP (mix,         mix,                 mix,           true,      0);
-    OP (mod,         modulus,             mod,           true,      0);
-    OP (mul,         mul,                 mul,           true,      0);
-    OP (neg,         neg,                 neg,           true,      0);
-    OP (neq,         compare_op,          neq,           true,      0);
-    OP (noise,       noise,               noise,         true,      0);
-    OP (nop,         nop,                 none,          true,      0);
-    OP (normal,      construct_triple,    triple,        true,      0);
-    OP (normalize,   generic,             normalize,     true,      0);
-    OP (or,          andor,               or,            true,      0);
-    OP (pnoise,      noise,               noise,         true,      0);
-    OP (point,       construct_triple,    triple,        true,      0);
+    // The "args" columns give the minimum and maximum number of args (counting
+    // the result, if any) that the op may have. They must accept every form
+    // of the op that oslc emits now or did in the past, since the .oso loader
+    // rejects any op outside its range. Ops whose arg count varies may still
+    // need to check which args are present (e.g., by type).
+
+    // name          llvmgen            folder        simp   flags      args
+    OP (aassign,     aassign,           aassign,      false, 0,         3, 3);
+    OP (abs,         generic,           abs,          true,  0,         2, 2);
+    OP (acos,        generic,           acos,         true,  0,         2, 2);
+    OP (add,         add,               add,          true,  0,         3, 3);
+    OP (and,         andor,             and,          true,  0,         3, 3);
+    OP (area,        area,              deriv,        true,  0,         2, 2);
+    OP (aref,        aref,              aref,         true,  0,         3, 3);
+    OP (arraycopy,   arraycopy,         none,         false, 0,         2, 2);
+    OP (arraylength, arraylength,       arraylength,  true,  0,         2, 2);
+    OP (asin,        generic,           asin,         true,  0,         2, 2);
+    OP (assign,      assign,            none,         true,  0,         2, 2);
+    OP (atan,        generic,           none,         true,  0,         2, 2);
+    OP (atan2,       generic,           none,         true,  0,         3, 3);
+    OP (backfacing, get_simple_SG_field, none,
+                                                      true,  0,         1, 1);
+    OP (bitand,      bitwise_binary_op, bitand,       true,  0,         3, 3);
+    OP (bitor,       bitwise_binary_op, bitor,        true,  0,         3, 3);
+    OP (blackbody,   blackbody,         none,         true,  0,         2, 2);
+    OP (break,       loopmod_op,        none,         false, 0,         0, 0);
+    OP (calculatenormal, calculatenormal, none,
+                                                      true,  0,         2, 2);
+    OP (cbrt,        generic,           cbrt,         true,  0,         2, 2);
+    OP (ceil,        generic,           ceil,         true,  0,         2, 2);
+    OP (cellnoise,   noise,             noise,        true,  0,         2, 3);
+    OP (clamp,       clamp,             clamp,        true,  0,         4, 4);
+    OP (closure,     closure,           none,         true,  0,         2, ANY);
+    OP (color,       construct_color,   triple,       true,  0,         4, 5);
+    OP (compassign,  compassign,        compassign,   false, 0,         3, 3);
+    OP (compl,       unary_op,          compl,        true,  0,         2, 2);
+    OP (compref,     compref,           compref,      true,  0,         3, 3);
+    OP (concat,      generic,           concat,       true,  STRCREATE, 3, 3);
+    OP (continue,    loopmod_op,        none,         false, 0,         0, 0);
+    OP (cos,         generic,           cos,          true,  0,         2, 2);
+    OP (cosh,        generic,           none,         true,  0,         2, 2);
+    OP (cross,       generic,           none,         true,  0,         3, 3);
+    OP (degrees,     generic,           degrees,      true,  0,         2, 2);
+    OP (determinant, generic,           none,         true,  0,         2, 2);
+    OP (dict_find,   dict_find,         none,         false, 0,         3, 3);
+    OP (dict_next,   dict_next,         none,         false, 0,         2, 2);
+    OP (dict_value,  dict_value,        none,         false, 0,         4, 4);
+    OP (distance,    generic,           none,         true,  0,         3, 3);
+    OP (div,         div,               div,          true,  0,         3, 3);
+    OP (dot,         generic,           dot,          true,  0,         3, 3);
+    OP (Dx,          DxDy,              deriv,        true,  0,         2, 2);
+    OP (Dy,          DxDy,              deriv,        true,  0,         2, 2);
+    OP (Dz,          Dz,                deriv,        true,  0,         2, 2);
+    OP (dowhile,     loop_op,           none,         false, 0,         1, 1);
+    OP (end,         end,               none,         false, 0,         0, 0);
+    OP (endswith,    generic,           endswith,     true,  STRCHARS,  3, 3);
+    OP (environment, environment,       none,         true,  TEX,       3, ANY);
+    OP (eq,          compare_op,        eq,           true,  0,         3, 3);
+    OP (erf,         generic,           erf,          true,  0,         2, 2);
+    OP (erfc,        generic,           erfc,         true,  0,         2, 2);
+    OP (error,       printf,            none,         false, SIDE,      1, ANY);
+    OP (exit,        return,            none,         false, 0,         0, 0);
+    OP (exp,         generic,           exp,          true,  0,         2, 2);
+    OP (exp2,        generic,           exp2,         true,  0,         2, 2);
+    OP (expm1,       generic,           expm1,        true,  0,         2, 2);
+    OP (fabs,        generic,           abs,          true,  0,         2, 2);
+    OP (filterwidth, filterwidth,       deriv,        true,  0,         2, 2);
+    OP (floor,       generic,           floor,        true,  0,         2, 2);
+    OP (fmod,        modulus,           none,         true,  0,         3, 3);
+    OP (for,         loop_op,           none,         false, 0,         1, 1);
+    OP (format,      printf,            format,       true,  STRCREATE, 2, ANY);
+    OP (fprintf,     printf,            none,         false, SIDE,      2, ANY);
+    OP (functioncall, functioncall, functioncall,
+                                                      false, 0,         1, 1);
+    OP (functioncall_nr, functioncall_nr, none,
+                                                      false, 0,         1, 1);
+    OP (ge,          compare_op,        ge,           true,  0,         3, 3);
+    OP (getattribute, getattribute, getattribute,
+                                                      false, 0,         3, 5);
+    OP (getchar,     generic,           getchar,      true,  STRCHARS,  3, 3);
+    OP (getmatrix,   getmatrix,         getmatrix,    false, 0,         4, 4);
+    OP (getmessage,  getmessage,        getmessage,   false, 0,         3, 4);
+    OP (gettextureinfo, gettextureinfo, gettextureinfo,
+                                                      false, TEX,       4, 6);
+    OP (gt,          compare_op,        gt,           true,  0,         3, 3);
+    OP (hash,        generic,           hash,         true,  0,         2, 3);
+    OP (hashnoise,   noise,             noise,        true,  0,         2, 3);
+    OP (if,          if,                if,           false, 0,         1, 1);
+    OP (inversesqrt, generic,           inversesqrt,  true,  0,         2, 2);
+    OP (isconnected, generic,           none,         true,  0,         2, 2);
+    OP (isconstant,  isconstant,        isconstant,   true,  0,         2, 2);
+    OP (isfinite,    generic,           none,         true,  0,         2, 2);
+    OP (isinf,       generic,           none,         true,  0,         2, 2);
+    OP (isnan,       generic,           none,         true,  0,         2, 2);
+    OP (le,          compare_op,        le,           true,  0,         3, 3);
+    OP (length,      generic,           none,         true,  0,         2, 2);
+    OP (log,         generic,           log,          true,  0,         2, 2);
+    OP (log10,       generic,           log10,        true,  0,         2, 2);
+    OP (log2,        generic,           log2,         true,  0,         2, 2);
+    OP (logb,        generic,           logb,         true,  0,         2, 2);
+    OP (lt,          compare_op,        lt,           true,  0,         3, 3);
+    OP (luminance,   luminance,         none,         true,  0,         2, 2);
+    OP (matrix,      matrix,            matrix,       true,  0,         2, 18);
+    OP (max,         minmax,            max,          true,  0,         3, 3);
+    OP (mxcompassign, mxcompassign, mxcompassign,
+                                                      false, 0,         4, 4);
+    OP (mxcompref,   mxcompref,         none,         true,  0,         4, 4);
+    OP (min,         minmax,            min,          true,  0,         3, 3);
+    OP (mix,         mix,               mix,          true,  0,         4, 4);
+    OP (mod,         modulus,           mod,          true,  0,         3, 3);
+    OP (mul,         mul,               mul,          true,  0,         3, 3);
+    OP (neg,         neg,               neg,          true,  0,         2, 2);
+    OP (neq,         compare_op,        neq,          true,  0,         3, 3);
+    OP (noise,       noise,             noise,        true,  0,         2, ANY);
+    OP (nop,         nop,               none,         true,  0,         0, ANY);
+    OP (normal,      construct_triple,  triple,       true,  0,         4, 5);
+    OP (normalize,   generic,           normalize,    true,  0,         2, 2);
+    OP (or,          andor,             or,           true,  0,         3, 3);
+    OP (pnoise,      noise,             noise,        true,  0,         3, ANY);
+    OP (point,       construct_triple,  triple,       true,  0,         4, 5);
     OP (pointcloud_search, pointcloud_search, pointcloud_search,
-                                                         false,     TEX);
-    OP (pointcloud_get, pointcloud_get,   pointcloud_get,false,     TEX);
-    OP (pointcloud_write, pointcloud_write, none,        false,     SIDE);
-    OP (pow,         generic,             pow,           true,      0);
-    OP (printf,      printf,              none,          false,     SIDE);
-    OP (psnoise,     noise,               noise,         true,      0);
-    OP (radians,     generic,             radians,       true,      0);
-    OP (raytype,     raytype,             raytype,       true,      0);
-    OP (regex_match, regex,               none,          false,     STRCHARS);
-    OP (regex_search, regex,              regex_search,  false,     STRCHARS);
-    OP (return,      return,              none,          false,     0);
-    OP (round,       generic,             none,          true,      0);
-    OP (select,      select,              select,        true,      0);
-    OP (setmessage,  setmessage,          setmessage,    false,     SIDE);
-    OP (shl,         bitwise_binary_op,   none,          true,      0);
-    OP (shr,         bitwise_binary_op,   none,          true,      0);
-    OP (sign,        generic,             none,          true,      0);
-    OP (sin,         generic,             sin,           true,      0);
-    OP (sincos,      sincos,              sincos,        false,     0);
-    OP (sinh,        generic,             none,          true,      0);
-    OP (smoothstep,  generic,             none,          true,      0);
-    OP (snoise,      noise,               noise,         true,      0);
-    OP (spline,      spline,              none,          true,      0);
-    OP (splineinverse, spline,            none,          true,      0);
-    OP (split,       split,               split,         false,     0);
-    OP (sqrt,        generic,             sqrt,          true,      0);
-    OP (startswith,  generic,             startswith,    true,      STRCHARS);
-    OP (step,        generic,             none,          true,      0);
-    OP (stof,        generic,             stof,          true,      STRCHARS);
-    OP (stoi,        generic,             stoi,          true,      STRCHARS);
-    OP (strlen,      generic,             strlen,        true,      STRCHARS);
-    OP2(strtof,stof, generic,             stof,          true,      STRCHARS);
-    OP2(strtoi,stoi, generic,             stoi,          true,      STRCHARS);
-    OP (sub,         sub,                 sub,           true,      0);
-    OP (substr,      generic,             substr,        true,      STRCHARS | STRCREATE);
-    OP (surfacearea, get_simple_SG_field, none,          true,      0);
-    OP (tan,         generic,             none,          true,      0);
-    OP (tanh,        generic,             none,          true,      0);
-    OP (texture,     texture,             texture,       true,      TEX);
-    OP (texture3d,   texture3d,           none,          true,      TEX);
-    OP (trace,       trace,               none,          false,     SIDE);
-    OP (transform,   transform,           transform,     true,      0);
-    OP (transformc,  transformc,          transformc,    true,      0);
-    OP (transformn,  transform,           transform,     true,      0);
-    OP (transformv,  transform,           transform,     true,      0);
-    OP (transpose,   generic,             none,          true,      0);
-    OP (trunc,       generic,             none,          true,      0);
-    OP (useparam,    useparam,            useparam,      false,     0);
-    OP (vector,      construct_triple,    triple,        true,      0);
-    OP (warning,     printf,              warning,       false,     SIDE);
-    OP (wavelength_color, blackbody,      none,          true,      0);
-    OP (while,       loop_op,             none,          false,     0);
-    OP (xor,         bitwise_binary_op,   xor,           true,      0);
+                                                      false, TEX,       5, ANY);
+    OP (pointcloud_get, pointcloud_get, pointcloud_get,
+                                                      false, TEX,       6, 6);
+    OP (pointcloud_write, pointcloud_write, none,
+                                                      false, SIDE,      3, ANY);
+    OP (pow,         generic,           pow,          true,  0,         3, 3);
+    OP (printf,      printf,            none,         false, SIDE,      1, ANY);
+    OP (psnoise,     noise,             noise,        true,  0,         3, 5);
+    OP (radians,     generic,           radians,      true,  0,         2, 2);
+    OP (raytype,     raytype,           raytype,      true,  0,         2, 2);
+    OP (regex_match, regex,             none,         false, STRCHARS,  3, 4);
+    OP (regex_search, regex, regex_search,
+                                                      false, STRCHARS,  3, 4);
+    OP (return,      return,            none,         false, 0,         0, 0);
+    OP (round,       generic,           none,         true,  0,         2, 2);
+    OP (select,      select,            select,       true,  0,         4, 4);
+    OP (setmessage,  setmessage,        setmessage,   false, SIDE,      2, 2);
+    OP (shl,         bitwise_binary_op, none,         true,  0,         3, 3);
+    OP (shr,         bitwise_binary_op, none,         true,  0,         3, 3);
+    OP (sign,        generic,           none,         true,  0,         2, 2);
+    OP (sin,         generic,           sin,          true,  0,         2, 2);
+    OP (sincos,      sincos,            sincos,       false, 0,         3, 3);
+    OP (sinh,        generic,           none,         true,  0,         2, 2);
+    OP (smoothstep,  generic,           none,         true,  0,         4, 4);
+    OP (snoise,      noise,             noise,        true,  0,         2, 3);
+    OP (spline,      spline,            none,         true,  0,         4, 5);
+    OP (splineinverse, spline, none,
+                                                      true,  0,         4, 5);
+    OP (split,       split,             split,        false, 0,         3, 5);
+    OP (sqrt,        generic,           sqrt,         true,  0,         2, 2);
+    OP (startswith,  generic,           startswith,   true,  STRCHARS,  3, 3);
+    OP (step,        generic,           none,         true,  0,         3, 3);
+    OP (stof,        generic,           stof,         true,  STRCHARS,  2, 2);
+    OP (stoi,        generic,           stoi,         true,  STRCHARS,  2, 2);
+    OP (strlen,      generic,           strlen,       true,  STRCHARS,  2, 2);
+    OP2(strtof,stof, generic,           stof,         true,  STRCHARS,  2, 2);
+    OP2(strtoi,stoi, generic,           stoi,         true,  STRCHARS,  2, 2);
+    OP (sub,         sub,               sub,          true,  0,         3, 3);
+    OP (substr,      generic,           substr,       true,  STRCHARS |
+                                                             STRCREATE, 4, 4);
+    OP (surfacearea, get_simple_SG_field, none,
+                                                      true,  0,         1, 1);
+    OP (tan,         generic,           none,         true,  0,         2, 2);
+    OP (tanh,        generic,           none,         true,  0,         2, 2);
+    OP (texture,     texture,           texture,      true,  TEX,       4, ANY);
+    OP (texture3d,   texture3d,         none,         true,  TEX,       3, ANY);
+    OP (trace,       trace,             none,         false, SIDE,      3, ANY);
+    OP (transform,   transform,         transform,    true,  0,         3, 4);
+    OP (transformc,  transformc,        transformc,   true,  0,         4, 4);
+    OP (transformn,  transform,         transform,    true,  0,         3, 4);
+    OP (transformv,  transform,         transform,    true,  0,         3, 4);
+    OP (transpose,   generic,           none,         true,  0,         2, 2);
+    OP (trunc,       generic,           none,         true,  0,         2, 2);
+    OP (useparam,    useparam,          useparam,     false, 0,         0, ANY);
+    OP (vector,      construct_triple,  triple,       true,  0,         4, 5);
+    OP (warning,     printf,            warning,      false, SIDE,      1, ANY);
+    OP (wavelength_color, blackbody, none,
+                                                      true,  0,         2, 2);
+    OP (while,       loop_op,           none,         false, 0,         1, 1);
+    OP (xor,         bitwise_binary_op, xor,          true,  0,         3, 3);
 #undef OP
 #undef OP2
 #undef TEX
 #undef SIDE
 #undef STRCHARS
 #undef STRCREATE
+#undef ANY
     // clang-format on
 }
 

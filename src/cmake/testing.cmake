@@ -447,8 +447,8 @@ macro (osl_add_all_tests)
                 oslinfo-arrayparams oslinfo-colorctrfloat
                 oslinfo-metadata oslinfo-noparams
                 osl-imageio
-                oso-bad-argderivs oso-bad-jumps oso-bad-maincode
-                oso-bad-structfields
+                oso-bad-argderivs oso-bad-arity oso-bad-jumps
+                oso-bad-maincode oso-bad-structfields
                 oso-excess-defaults
                 paramval-floatpromotion
                 pragma-nowarn

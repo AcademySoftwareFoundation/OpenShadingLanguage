@@ -1283,6 +1283,8 @@ BackendCpp::build_cpp_code(int opbegin, int opend, bool do_indent_block)
 
         auto* opdesc = shadingsys().op_descriptor(op.opname());
         if (opdesc && opdesc->cppgen) {
+            // The loader checked arg counts; ops made since must comply too.
+            OSL_DASSERT(opdesc->nargs_ok(op.nargs()));
             // If the opcode has a C++ generator, call it
             if (!opdesc->cppgen(*this, opnum))
                 outputfmtln("// Cpp {} FAILED", op.opname());

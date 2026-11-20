@@ -1,0 +1,12 @@
+OpenShadingLanguage 1.00
+shader jump_one_past_end
+oparam	float	result	0		%read{2147483647,-1} %write{2,3}
+global	float	u	%read{0,3} %write{2147483647,-1}
+const	float	$const1	0.5		%read{0,2} %write{2147483647,-1}
+temp	int	$tmp1	%read{1,1} %write{0,0}
+code ___main___
+	gt		$tmp1 u $const1 	%argrw{"wrr"}
+	if		$tmp1 3 5 	%argrw{"r"}
+	assign		result $const1 	%argrw{"wr"}
+	assign		result u 	%argrw{"wr"}
+	end

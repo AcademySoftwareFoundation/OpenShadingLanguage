@@ -1,15 +1,20 @@
 
-ERROR: Parsing shader "jump_past_end": op 1 (if) has invalid jump target 9 (must be in 2..5)
+ERROR: Parsing shader "jump_past_end": op 1 (if) has invalid jump target 9 (must be in 2..4)
 ERROR: Unable to read "data/jump_past_end.oso"
 ERROR: Could not find shader "data/jump_past_end"
         group: unnamed_group_1
 
-ERROR: Parsing shader "jump_backward": op 1 (if) has invalid jump target 0 (must be in 2..5)
+ERROR: Parsing shader "jump_one_past_end": op 1 (if) has invalid jump target 5 (must be in 2..4)
+ERROR: Unable to read "data/jump_one_past_end.oso"
+ERROR: Could not find shader "data/jump_one_past_end"
+        group: unnamed_group_1
+
+ERROR: Parsing shader "jump_backward": op 1 (if) has invalid jump target 0 (must be in 2..4)
 ERROR: Unable to read "data/jump_backward.oso"
 ERROR: Could not find shader "data/jump_backward"
         group: unnamed_group_1
 
-ERROR: Parsing shader "jump_to_self": op 1 (if) has invalid jump target 1 (must be in 2..5)
+ERROR: Parsing shader "jump_to_self": op 1 (if) has invalid jump target 1 (must be in 2..4)
 ERROR: Unable to read "data/jump_to_self.oso"
 ERROR: Could not find shader "data/jump_to_self"
         group: unnamed_group_1

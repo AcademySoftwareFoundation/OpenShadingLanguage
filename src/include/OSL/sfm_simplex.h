@@ -182,7 +182,7 @@ namespace fast_grad3 {
 //static fast_grad3::mask_validator the_fast_grad3_mask_validator;
 
 namespace fast_grad4 {
-    alignas(64) static const OSL::Block<Vec4,32> lut_wide(
+    static const OSL::Block<Vec4,32> lut_wide(
       Vec4( 0.0f, 1.0f, 1.0f, 1.0f ),  Vec4( 0.0f, 1.0f, 1.0f, -1.0f ),  Vec4( 0.0f, 1.0f, -1.0f, 1.0f ),  Vec4( 0.0f, 1.0f, -1.0f, -1.0f ), // 32 tesseract edges
       Vec4( 0.0f, -1.0f, 1.0f, 1.0f ), Vec4( 0.0f, -1.0f, 1.0f, -1.0f ), Vec4( 0.0f, -1.0f, -1.0f, 1.0f ), Vec4( 0.0f, -1.0f, -1.0f, -1.0f ),
       Vec4( 1.0f, 0.0f, 1.0f, 1.0f ),  Vec4( 1.0f, 0.0f, 1.0f, -1.0f ),  Vec4( 1.0f, 0.0f, -1.0f, 1.0f ),  Vec4( 1.0f, 0.0f, -1.0f, -1.0f ),

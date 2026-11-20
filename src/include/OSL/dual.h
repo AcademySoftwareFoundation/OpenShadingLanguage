@@ -1084,7 +1084,7 @@ OSL_HOSTDEVICE OSL_FORCEINLINE Dual<T,P> fast_safe_pow(const Dual<T,P> &u, const
 template<class T, int P>
 OSL_HOSTDEVICE OSL_FORCEINLINE Dual<T,P> safe_log2 (const Dual<T,P> &a)
 {
-    T f = safe_log2(a.val());
+    T f = OIIO::safe_log2(a.val());
     T df = a.val() < std::numeric_limits<T>::min() ? T(0) : T(1) / (a.val() * T(M_LN2));
     return dualfunc (a, f, df);
 }
@@ -1103,7 +1103,7 @@ OSL_HOSTDEVICE OSL_FORCEINLINE Dual<T,P> fast_log2(const Dual<T,P> &a)
 template<class T, int P>
 OSL_HOSTDEVICE OSL_FORCEINLINE Dual<T,P> safe_log10 (const Dual<T,P> &a)
 {
-    T f = safe_log10(a.val());
+    T f = OIIO::safe_log10(a.val());
     T df = a.val() < std::numeric_limits<T>::min() ? T(0) : T(1) / (a.val() * T(M_LN10));
     return dualfunc (a, f, df);
 }
@@ -1300,13 +1300,17 @@ OSL_FORCEINLINE OSL_HOSTDEVICE float safe_fmod (float a, float b)
 }
 #endif
 
+// f(a,b) = a - N*b, where N = trunc(a/b) is piecewise constant, so
+// df/da = 1, df/db = -N. When b == 0, we take N = 0 (matching the LLVM
+// code generators, which pass a's derivs through).
 template<class T, int P>
 OSL_FORCEINLINE OSL_HOSTDEVICE Dual<T,P>
 safe_fmod (const Dual<T,P>& a, const Dual<T,P>& b)
 {
-    Dual<T,P> result = a;
-    result.val() = safe_fmod(a.val(), b.val());
-    return result;
+    T f = safe_fmod(a.val(), b.val());
+    // trunc(a/b), computed to be consistent with f
+    T N = b.val() == T(0) ? T(0) : (a.val() - f) / b.val();
+    return dualfunc (a, b, f, T(1), -N);
 }
 
 

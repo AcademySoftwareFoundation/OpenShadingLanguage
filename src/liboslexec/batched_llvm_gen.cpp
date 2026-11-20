@@ -1702,6 +1702,11 @@ LLVMGEN(llvm_gen_modulus)
 
     int num_components = type.aggregate;
 
+    // fmod(a,b) = a - N*b, N = trunc(a/b), so its derivative is a' - N*b'.
+    // We only need N if b has derivs.
+    bool need_N       = Result.has_derivs() && B.has_derivs();
+    llvm::Value* N[3] = { nullptr, nullptr, nullptr };
+
 #if 0
     if (is_float && !op_is_uniform) {
         // llvm 5.0.1 did not do a good job with op_mod when its
@@ -1752,6 +1757,14 @@ LLVMGEN(llvm_gen_modulus)
             llvm::Value* mod_result   = rop.ll.op_mod(a, b);
             llvm::Value* r = rop.ll.op_select(is_zero_mask, zeroConstant,
                                               mod_result);
+            if (need_N) {
+                // N = (a - r) / b, or 0 if b == 0. Computed before storing
+                // r, in case Result aliases A or B.
+                N[i] = rop.ll.op_select(is_zero_mask, zeroConstant,
+                                        rop.ll.op_div(rop.ll.op_sub(a, r), b));
+                if (op_is_uniform && !result_is_uniform)
+                    N[i] = rop.ll.widen_value(N[i]);
+            }
             if (op_is_uniform && !result_is_uniform) {
                 r = rop.ll.widen_value(r);
             }
@@ -1761,8 +1774,26 @@ LLVMGEN(llvm_gen_modulus)
 
     if (Result.has_derivs()) {
         OSL_ASSERT(is_float);
-        if (A.has_derivs()) {
-            // Modulus of duals: (a mod b, ax, ay)
+        if (need_N) {
+            // Modulus of duals: (a mod b, ax - N*bx, ay - N*by)
+            for (int d = 1; d <= 2; ++d) {
+                for (int i = 0; i < num_components; i++) {
+                    llvm::Value* bd  = rop.loadLLVMValue(B, i, d, type,
+                                                         result_is_uniform);
+                    llvm::Value* nbd = rop.ll.op_mul(N[i], bd);
+                    llvm::Value* deriv;
+                    if (A.has_derivs()) {
+                        llvm::Value* ad = rop.loadLLVMValue(A, i, d, type,
+                                                            result_is_uniform);
+                        deriv           = rop.ll.op_sub(ad, nbd);
+                    } else {
+                        deriv = rop.ll.op_neg(nbd);
+                    }
+                    rop.storeLLVMValue(deriv, Result, i, d);
+                }
+            }
+        } else if (A.has_derivs()) {
+            // Modulus of duals with constant b: (a mod b, ax, ay)
             for (int d = 1; d <= 2; ++d) {
                 for (int i = 0; i < num_components; i++) {
                     llvm::Value* deriv = rop.loadLLVMValue(A, i, d, type,

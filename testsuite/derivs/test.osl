@@ -132,6 +132,14 @@ test ()
                 u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
     }
 
+    {
+        // Varying divisor: Dx(a) = 1, Dy(a) = -trunc((u+2.5)/(v+0.8))
+        float a = fmod(u+2.5, v+0.8);
+        printf ("\n");
+        printf ("fmod: a = fmod(u+2.5,v+0.8) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+    }
+
 
     {
         float a = degrees(u);

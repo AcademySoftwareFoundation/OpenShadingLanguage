@@ -2005,6 +2005,23 @@ BackendLLVM::prepare_module_for_cuda_jit()
         }
     }
 
+#if OSL_LLVM_VERSION >= 230
+    // LLVM 23 and newer don't inline a function whose target-cpu and
+    // target-features are incompatible with its caller's, even if it is
+    // alwaysinline. The optimizer has no TargetMachine here, so compatible
+    // means identical. The clang-compiled shadeops and rend_lib bitcode have
+    // both attributes and the generated group functions have neither, so
+    // without removing them no library function would be inlined. Removing
+    // them doesn't change the PTX: NVPTX compiles every function for the
+    // subtarget of nvptx_target_machine(), and its own TargetTransformInfo
+    // treats any caller and callee as compatible. The bitcode must not use
+    // features that this subtarget lacks.
+    for (llvm::Function& fn : *ll.module()) {
+        fn.removeFnAttr("target-cpu");
+        fn.removeFnAttr("target-features");
+    }
+#endif
+
     // Set the inlining behavior for each function in the module, based on
     // the shadingsys attributes. The inlining attributes are not modified
     // by default.

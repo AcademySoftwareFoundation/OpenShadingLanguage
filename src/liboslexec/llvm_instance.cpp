@@ -24,6 +24,9 @@
 #include <llvm/Target/TargetMachine.h>
 
 #if OSL_USE_OPTIX
+#    include <llvm/IR/Instructions.h>
+#    include <llvm/IR/Intrinsics.h>
+#    include <llvm/IR/IntrinsicsNVPTX.h>
 #    include <llvm/Linker/Linker.h>
 #endif
 
@@ -2075,11 +2078,44 @@ BackendLLVM::prepare_module_for_cuda_jit()
         }
     }
 
+#if OSL_LLVM_VERSION >= 230
+    // LLVM 23 and newer take the denormal mode only from the denormal_fpenv
+    // attribute, and convert the "denormal-fp-math" strings to it only when
+    // reading bitcode, so set the attribute itself. NVPTX takes from it
+    // whether to flush f32 denormals to zero, and library code inlined into a
+    // group takes the mode of the group.
+    //
+    // The group functions get the modes the strings set: preserve-sign for
+    // every type with FTZ, IEEE without. The library functions get the same
+    // f32 mode but the other f64 mode. PTX never flushes f64 denormals, so the
+    // f64 mode only affects how the optimizer folds them, but the mismatch
+    // keeps LLVM's cost model from inlining library functions into the
+    // groups: only the alwaysinline ones are inlined, as with LLVM 22 and
+    // older. Don't make the f64 modes equal.
+#    ifndef OSL_CUDA_NO_FTZ
+    const llvm::DenormalMode group_mode = llvm::DenormalMode::getPreserveSign();
+    const llvm::DenormalMode lib_f64_mode = llvm::DenormalMode::getIEEE();
+#    else
+    const llvm::DenormalMode group_mode = llvm::DenormalMode::getIEEE();
+    const llvm::DenormalMode lib_f64_mode
+        = llvm::DenormalMode::getPreserveSign();
+#    endif
+    llvm::AttrBuilder group_env(ll.context());
+    group_env.addDenormalFPEnvAttr(llvm::DenormalFPEnv(group_mode, group_mode));
+    llvm::AttrBuilder lib_env(ll.context());
+    lib_env.addDenormalFPEnvAttr(llvm::DenormalFPEnv(lib_f64_mode, group_mode));
+    for (llvm::Function& fn : *ll.module())
+        fn.addFnAttrs(fn.hasFnAttribute("osl-lib-function") ? lib_env
+                                                            : group_env);
+#endif
+
 #ifndef OSL_CUDA_NO_FTZ
     for (llvm::Function& fn : *ll.module()) {
         fn.addFnAttr("nvptx-f32ftz", "true");
+#    if OSL_LLVM_VERSION < 230
         fn.addFnAttr("denormal-fp-math", "preserve-sign,preserve-sign");
         fn.addFnAttr("denormal-fp-math-f32", "preserve-sign,preserve-sign");
+#    endif
     }
 #endif
 }
@@ -2462,6 +2498,30 @@ BackendLLVM::run()
                 fn.deleteBody();
             }
         }
+
+#    if OSL_LLVM_VERSION >= 230
+        // NVPTX emits approximate division and square root for instructions
+        // with the afn flag; frem is lowered to a division too. The library
+        // code inlined into the groups has it, because clang compiles the
+        // shadeops with -ffast-math, while the code OSL generates doesn't.
+        // Clear it, so that inlined library code divides and takes square
+        // roots as precisely as the code around it, as it did with LLVM 20.
+        for (llvm::Function& fn : *ll.module()) {
+            for (llvm::BasicBlock& bb : fn) {
+                for (llvm::Instruction& inst : bb) {
+                    const unsigned op      = inst.getOpcode();
+                    llvm::Intrinsic::ID id = llvm::Intrinsic::not_intrinsic;
+                    if (auto* call = llvm::dyn_cast<llvm::CallInst>(&inst))
+                        id = call->getIntrinsicID();
+                    if (op == llvm::Instruction::FDiv
+                        || op == llvm::Instruction::FRem
+                        || id == llvm::Intrinsic::sqrt
+                        || id == llvm::Intrinsic::nvvm_sqrt_f)
+                        inst.setHasApproxFunc(false);
+                }
+            }
+        }
+#    endif
     }
 #endif
 

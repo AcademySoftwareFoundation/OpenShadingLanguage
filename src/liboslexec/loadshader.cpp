@@ -69,6 +69,8 @@ public:
     // Return true if all are valid. If not, issue an error, set m_errors,
     // and return false.
     bool check_jumps();
+    // Check that the main code section contains at least one op.
+    bool check_main_code();
 
 private:
     ShadingSystemImpl& m_shadingsys;  ///< Reference to the shading system
@@ -97,7 +99,8 @@ OSOReaderToMaster::parse_file(const std::string& filename)
     m_master->m_maincodeend   = 0;
     m_codesection.clear();
     m_codesym = -1;
-    return OSOReader::parse_file(filename) && check_jumps() && !m_errors;
+    return OSOReader::parse_file(filename) && check_jumps() && check_main_code()
+           && !m_errors;
 }
 
 
@@ -110,7 +113,8 @@ OSOReaderToMaster::parse_memory(const std::string& oso)
     m_master->m_maincodeend   = 0;
     m_codesection.clear();
     m_codesym = -1;
-    return OSOReader::parse_memory(oso) && check_jumps() && !m_errors;
+    return OSOReader::parse_memory(oso) && check_jumps() && check_main_code()
+           && !m_errors;
 }
 
 
@@ -586,6 +590,26 @@ void
 OSOReaderToMaster::instruction_jump(int target)
 {
     m_master->m_ops.back().add_jump(target);
+}
+
+
+
+bool
+OSOReaderToMaster::check_main_code()
+{
+    // oslc always emits at least an `end` op in the main code section.
+    // A file whose main section is empty (e.g., truncated right after the
+    // `code ___main___` marker) would leave maincodebegin pointing one past
+    // the last op, which the optimizer and code generators use as an op
+    // index.
+    if (m_master->m_maincodebegin >= int(m_master->m_ops.size())) {
+        m_shadingsys.errorfmt(
+            "Parsing shader \"{}\": main code section is empty",
+            m_master->shadername());
+        m_errors = true;
+        return false;
+    }
+    return true;
 }
 
 

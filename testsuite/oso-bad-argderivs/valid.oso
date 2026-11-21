@@ -1,0 +1,9 @@
+OpenShadingLanguage 1.00
+shader valid
+param	float	f	0.5		%read{0,0} %write{2147483647,-1} %derivs
+const	string	$const1	"Dx(f) = %g\n"		%read{1,1} %write{2147483647,-1}
+temp	float	$tmp1	%read{1,1} %write{0,0}
+code ___main___
+	Dx		$tmp1 f 	%argrw{"wr"} %argderivs{1}
+	printf		$const1 $tmp1 	%argrw{"rr"}
+	end

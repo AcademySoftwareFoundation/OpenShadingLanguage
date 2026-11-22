@@ -448,7 +448,7 @@ OSOReaderToMaster::hint(string_view hintstring)
             m_master->m_ops.back().argwriteonly(2);
         return;
     }
-    if (Strutil::parse_prefix(h, "%argderivs{")) {
+    if (Strutil::parse_prefix(h, "%argderivs{") && m_master->m_ops.size()) {
         while (1) {
             string_view afield = Strutil::parse_until(h, ",}");
             Strutil::parse_char(h, ',');  // skip the separator

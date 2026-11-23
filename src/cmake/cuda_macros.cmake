@@ -19,7 +19,7 @@ set (OSL_NVPTX_PTX_FLAG "-mattr=${OSL_NVPTX_PTX_FEATURE}")
 # host behavior, etc.
 set (CUDA_NO_FTZ OFF CACHE BOOL "Do not enable force-to-zero when compiling for CUDA")
 if (CUDA_NO_FTZ)
-    add_compile_definitions (DOSL_CUDA_NO_FTZ=1)
+    add_compile_definitions (OSL_CUDA_NO_FTZ=1)
 endif ()
 
 # Compile a CUDA file to PTX using NVCC

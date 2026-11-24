@@ -147,6 +147,8 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
         # compiling for Cuda. When all 3rd parties have their export macro fixed these warnings
         # can be restored.
         set (CLANG_MSVC_FIX -Wno-ignored-attributes -Wno-unknown-attributes)
+        # Our clang may be older than the MSVC STL headers expect.
+        list (APPEND CLANG_MSVC_FIX -D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH)
     endif ()
 
     if (NOT CUDA_NO_FTZ)

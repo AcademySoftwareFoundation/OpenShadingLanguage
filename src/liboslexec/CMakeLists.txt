@@ -548,6 +548,7 @@ target_compile_definitions (${local_lib}
         OSL_EXPORTS
         CUDA_TARGET_ARCH="${CUDA_TARGET_ARCH}"
         OSL_CUDA_VERSION="${CUDA_VERSION}"
+        OSL_NVPTX_PTX_FEATURE="${OSL_NVPTX_PTX_FEATURE}"
         OSL_OPTIX_VERSION="${OPTIX_VERSION}"
     )
 if (partio_FOUND)

@@ -1906,7 +1906,7 @@ LLVM_Util::nvptx_target_machine()
 #else
             ModuleTriple.str(),
 #endif
-            CUDA_TARGET_ARCH, "+ptx50", options, llvm::Reloc::Static,
+            CUDA_TARGET_ARCH, OSL_NVPTX_PTX_FEATURE, options, llvm::Reloc::Static,
             llvm::CodeModel::Small,
 #if OSL_LLVM_VERSION >= 180
             llvm::CodeGenOptLevel::Default

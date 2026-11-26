@@ -74,6 +74,14 @@ function ( EMBED_LLVM_BITCODE_IN_CPP src_list suffix output_name list_to_append_
                 list (APPEND LLVM_COMPILE_FLAGS -arch ${CMAKE_OSX_ARCHITECTURES})
             endif ()
         endif ()
+        if (MSVC)
+            # The bitcode is compiled by the clang from our LLVM install,
+            # but against the MSVC STL headers, which may demand a newer
+            # clang than the LLVM we use (e.g., MSVC 14.52 STL requires
+            # clang 22+). Our bitcode only lightly uses the STL, so allow
+            # the mismatch rather than fail.
+            list (APPEND LLVM_COMPILE_FLAGS -D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH)
+        endif ()
 
         list (TRANSFORM include_dirs PREPEND -I
             OUTPUT_VARIABLE ALL_INCLUDE_DIRS)

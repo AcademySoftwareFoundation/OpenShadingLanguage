@@ -1,0 +1,12 @@
+
+ERROR: Parsing shader "empty_main": main code section is empty
+ERROR: Unable to read "data/empty_main.oso"
+ERROR: Could not find shader "data/empty_main"
+        group: unnamed_group_1
+
+ERROR: Error, line : 
+ERROR: Failed parse of high_byte.oso (error code 1)
+ERROR: Unable to read "high_byte.oso"
+ERROR: Could not find shader "high_byte"
+        group: unnamed_group_1
+

@@ -1,0 +1,8 @@
+OpenShadingLanguage 1.00
+shader empty_main
+param	float	A	0.5		%read{0,0} %write{2147483647,-1}
+oparam	float	B	0		%read{2147483647,-1} %write{0,0} %initexpr
+code B
+	assign		B A 	%argrw{"wr"}
+code ___main___
+

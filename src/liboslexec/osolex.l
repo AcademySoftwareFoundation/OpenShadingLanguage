@@ -246,8 +246,11 @@ OSL_GCC_ONLY_PRAGMA(GCC diagnostic ignored "-Wregister")
                             return ENDOFLINE;
                         }
 
- /* catch-all rule for any other single characters */
-.			{  return (yylval->i = *yytext); }
+ /* catch-all rule for any other single characters. Cast to unsigned char:
+  * a byte >= 0x80 must not become a negative token, which the parser
+  * would take to mean end of input.
+  */
+.			{  return (yylval->i = (unsigned char)*yytext); }
 
 %%
 

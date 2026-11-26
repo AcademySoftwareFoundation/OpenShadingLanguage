@@ -595,9 +595,10 @@ OSOReaderToMaster::check_jumps()
 {
     // A jump target must lie after the op itself (oslc only generates
     // forward jumps; loops are encoded as sections that follow the loop
-    // op), and no further than one past the last op. Anything else would
+    // op), and must be an actual op (oslc always ends the code with an
+    // `end` op, which is the furthest any jump goes). Anything else would
     // later be used to index op-sized arrays out of bounds, e.g. in the
-    // runtime optimizer's find_conditionals().
+    // runtime optimizer's find_conditionals() and find_basic_blocks().
     int nops = int(m_master->m_ops.size());
     for (int opnum = 0; opnum < nops; ++opnum) {
         const Opcode& op(m_master->m_ops[opnum]);
@@ -605,11 +606,11 @@ OSOReaderToMaster::check_jumps()
             int target = op.jump(j);
             if (target < 0)
                 continue;  // -1 means "no jump"
-            if (target <= opnum || target > nops) {
+            if (target <= opnum || target >= nops) {
                 m_shadingsys.errorfmt(
                     "Parsing shader \"{}\": op {} ({}) has invalid jump target {} (must be in {}..{})",
                     m_master->shadername(), opnum, op.opname(), target,
-                    opnum + 1, nops);
+                    opnum + 1, nops - 1);
                 m_errors = true;
                 return false;
             }

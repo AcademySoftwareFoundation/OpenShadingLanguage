@@ -159,16 +159,8 @@ OSL source → (Flex/Bison) → AST → (liboslcomp) → `.oso` bytecode → (li
 
 ## Commits and PRs
 
-- Keep PRs narrow and easy to review.
-- Prefix format: `type(subsystem): message` — subsystem is optional but helpful.
-- Valid types: `fix:`, `feat:`, `perf:`, `api:`, `int:`, `build:`, `test:`,
-  `ci:`, `docs:`, `refactor:`, `style:`, `admin:`, `revert:`.
-- Add a subsystem tag when it helps, e.g. `fix(exr):` or `perf(IBA):`.
-- Write commit messages and PR descriptions that explain why the change is
-  needed, what behavior changes, and any non-obvious implementation choices.
-- After changing a dependency minimum version, a file or directory path, or a
-  build/test command, check `AGENTS.md` for statements about it and correct
-  any that are now wrong, as part of the same change.
+When making a commit or drafting a commit message or PR description,
+be sure to invoke the `commit-message` skill.
 
 ## Spec-driven design
 

@@ -75,7 +75,15 @@ to make it aligned with the guidelines below.
 - Submission commits must follow all the unbreakable rules in the section
   above.
 
-- Be concise.
+- Be concise. Keep PRs narrow and easy to review, and keep commit messages
+  clear and to the point.
+
+- Commit message subject line: `type(subsystem): message`
+  - Valid types include: `fix:`, `feat:`, `perf:`, `api:`, `int:`, `build:`,
+    `test:`, `ci:`, `docs:`, `refactor:`, `style:`, `admin:`, `revert:`.
+  - The subsystem tag is optional. Add a subsystem or major feature when it
+    helps, e.g. `fix(oslc):` or `perf(optix):`.
+  - If in doubt, look at the history of how these tags have been used.
 
 - Scan for typos. If found in user-written messages, present the proposed
   fixes and ask for confirmation.

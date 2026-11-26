@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <limits>
 #include <list>
 #include <map>
 #include <memory>
@@ -149,6 +150,13 @@ struct OpDescriptor {
     // simple if wholly overwrites arg0, no other writes, no side effects
     bool simple_assign { false };
     int flags { 0 };  // other flags
+    // Range of the number of args the op may have. The .oso loader rejects
+    // any op outside its range, so code generators and constant folders
+    // may count on at least minargs args being present.
+    int minargs { 0 };
+    int maxargs { AnyNumArgs };
+
+    static constexpr int AnyNumArgs = std::numeric_limits<int>::max();
 
     OpDescriptor() = default;
 
@@ -156,7 +164,8 @@ struct OpDescriptor {
 #if OSL_USE_BATCHED
                  OpLLVMGenWide llw,
 #endif
-                 OpFolder fold = NULL, bool simple = false, int flags = 0)
+                 OpFolder fold = NULL, bool simple = false, int flags = 0,
+                 int minargs = 0, int maxargs = AnyNumArgs)
         : name(n)
         , llvmgen(ll)
         ,
@@ -167,7 +176,15 @@ struct OpDescriptor {
         folder(fold)
         , simple_assign(simple)
         , flags(flags)
+        , minargs(minargs)
+        , maxargs(maxargs)
     {
+    }
+
+    // Is `nargs` an allowed number of args for this op?
+    bool nargs_ok(int nargs) const
+    {
+        return nargs >= minargs && nargs <= maxargs;
     }
 
     enum FlagValues {

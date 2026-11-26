@@ -1,0 +1,21 @@
+
+ERROR: Parsing shader "too_few_args": op 2 (assign) has 1 args (expected 2)
+ERROR: Unable to read "data/too_few_args.oso"
+ERROR: Could not find shader "data/too_few_args"
+        group: unnamed_group_1
+
+ERROR: Parsing shader "too_many_args": op 2 (assign) has 3 args (expected 2)
+ERROR: Unable to read "data/too_many_args.oso"
+ERROR: Could not find shader "data/too_many_args"
+        group: unnamed_group_1
+
+ERROR: Parsing shader "range_too_many": op 2 (split) has 6 args (expected 3..5)
+ERROR: Unable to read "data/range_too_many.oso"
+ERROR: Could not find shader "data/range_too_many"
+        group: unnamed_group_1
+
+ERROR: Parsing shader "variadic_too_few": op 2 (printf) has 0 args (expected at least 1)
+ERROR: Unable to read "data/variadic_too_few.oso"
+ERROR: Could not find shader "data/variadic_too_few"
+        group: unnamed_group_1
+

@@ -2235,6 +2235,8 @@ RuntimeOptimizer::optimize_ops(int beginop, int endop,
         // constant-fold, dispatch to the appropriate routine.
         if (optimize() >= 2 && m_opt_constant_fold) {
             if (opd && opd->folder) {
+                // The loader checked arg counts; new ops must comply too.
+                OSL_DASSERT(opd->nargs_ok(op->nargs()));
                 int c = (*opd->folder)(*this, opnum);
                 if (c) {
                     changed += c;

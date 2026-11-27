@@ -235,7 +235,7 @@ function (reject_out_of_range_versions pkgname pkgversion versionmin versionmax 
     if (NOT ${pkgname}_FOUND AND NOT ${pkgname_upper}_FOUND)
         message (STATUS "${pkgname} was not found")
     elseif ("${pkgversion}" STREQUAL "")
-        message (ERROR "${pkgname} found but version was empty")
+        message (WARNING "${pkgname} found but version was empty")
     elseif (pkgversion VERSION_LESS versionmin
             OR pkgversion VERSION_GREATER versionmax)
         # message (STATUS "${ColorRed}${pkgname} ${pkgversion} is outside the required range ${versionmin}...${versionmax} ${ColorReset}")
